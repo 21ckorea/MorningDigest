@@ -40,8 +40,15 @@ export async function createKeywordAction(
     };
   }
 
-  const keyword = createKeyword(parsed.data);
-  return { success: true, data: keyword };
+  try {
+    const keyword = await createKeyword(parsed.data);
+    return { success: true, data: keyword };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '키워드 생성 중 오류가 발생했습니다.',
+    };
+  }
 }
 
 export async function createKeywordGroupAction(
@@ -55,19 +62,26 @@ export async function createKeywordGroupAction(
     };
   }
 
-  const keywordList = getKeywordsByIds(parsed.data.keywordIds);
-  if (keywordList.length === 0) {
-    return { success: false, error: '선택된 키워드를 찾을 수 없습니다.' };
+  try {
+    const keywordList = await getKeywordsByIds(parsed.data.keywordIds);
+    if (keywordList.length === 0) {
+      return { success: false, error: '선택된 키워드를 찾을 수 없습니다.' };
+    }
+
+    const group = await createKeywordGroup({
+      name: parsed.data.name,
+      description: parsed.data.description,
+      timezone: parsed.data.timezone,
+      sendTime: parsed.data.sendTime,
+      days: parsed.data.days,
+      keywords: keywordList,
+    });
+
+    return { success: true, data: group };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '그룹 생성 중 오류가 발생했습니다.',
+    };
   }
-
-  const group = createKeywordGroup({
-    name: parsed.data.name,
-    description: parsed.data.description,
-    timezone: parsed.data.timezone,
-    sendTime: parsed.data.sendTime,
-    days: parsed.data.days,
-    keywords: keywordList,
-  });
-
-  return { success: true, data: group };
 }

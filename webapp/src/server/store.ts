@@ -24,6 +24,20 @@ type KeywordRow = {
   created_at: string;
 };
 
+function mapKeyword(row: KeywordRow): Keyword {
+  return {
+    id: row.id,
+    word: row.word,
+    priority: row.priority,
+    createdAt: row.created_at,
+    volume: row.volume,
+  };
+}
+
+function buildNextDeliveryLabel(sendTime: string) {
+  return `다음 ${sendTime}`;
+}
+
 type KeywordGroupRow = {
   id: string;
   name: string;
@@ -451,15 +465,7 @@ function mapDeliveryLog(row: DeliveryLogRow): DeliveryLog {
   };
 }
 
-function mapKeyword(row: KeywordRow): Keyword {
-  return {
-    id: row.id,
-    word: row.word,
-    priority: row.priority,
-    createdAt: row.created_at,
-    volume: row.volume,
-  };
-}
+const seedKeywordsFromGroups: Keyword[] = seedGroups.flatMap((group) => group.keywords);
 
 function mapGroup(row: KeywordGroupRow): KeywordGroup {
   return {
@@ -590,7 +596,7 @@ export async function createKeywordGroup(data: {
 }) {
   await initPromise;
   const id = randomUUID();
-  const nextDelivery = `다음 ${data.sendTime}`;
+  const nextDelivery = buildNextDeliveryLabel(data.sendTime);
   await sql`
     INSERT INTO keyword_groups (id, name, description, timezone, send_time, days, status, next_delivery, recipients)
     VALUES (${id}, ${data.name}, ${data.description}, ${data.timezone}, ${data.sendTime}, ${data.days}, 'active', ${nextDelivery}, ${data.recipients ?? []})
@@ -644,7 +650,8 @@ export async function updateKeywordGroup(data: {
         send_time = ${data.sendTime},
         days = ${data.days},
         status = ${data.status},
-        recipients = ${data.recipients ?? []}
+        recipients = ${data.recipients ?? []},
+        next_delivery = ${buildNextDeliveryLabel(data.sendTime)}
     WHERE id = ${data.id}
   `;
 
@@ -794,7 +801,7 @@ export async function resetStores() {
   await initPromise;
   await sql`TRUNCATE notification_settings, delivery_settings, delivery_logs, digest_articles, digest_issues, group_keywords, keyword_groups, keywords`;
 
-  for (const keyword of seedKeywords) {
+  for (const keyword of seedKeywordsFromGroups) {
     await sql`
       INSERT INTO keywords (id, word, priority, volume, created_at)
       VALUES (${keyword.id}, ${keyword.word}, ${keyword.priority}, ${keyword.volume}, ${keyword.createdAt})

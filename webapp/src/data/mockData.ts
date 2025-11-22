@@ -41,6 +41,7 @@ export const keywordGroups: KeywordGroup[] = [
     status: "active",
     nextDelivery: "오늘 07:00",
     keywords,
+    recipients: ["team+ai@example.com"],
   },
   {
     id: "kg-2",
@@ -52,6 +53,7 @@ export const keywordGroups: KeywordGroup[] = [
     status: "paused",
     nextDelivery: "내일 07:30",
     keywords: keywords.slice(1),
+    recipients: ["retail@example.com", "marketing@example.com"],
   },
 ];
 
