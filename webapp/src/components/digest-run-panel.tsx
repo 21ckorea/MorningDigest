@@ -27,7 +27,7 @@ type ApiResponse = {
 };
 
 export function DigestRunPanel() {
-  const [sendEmails, setSendEmails] = useState(false);
+  const [sendEmails, setSendEmails] = useState(true);
   const [recipientInput, setRecipientInput] = useState("");
   const [status, setStatus] = useState<"idle" | "running" | "success" | "error">("idle");
   const [message, setMessage] = useState<string>("수동 실행으로 새 다이제스트를 생성할 수 있습니다.");
@@ -44,17 +44,16 @@ export function DigestRunPanel() {
 
   const handleRun = async () => {
     setStatus("running");
-    setMessage("다이제스트 생성 중...");
+    setMessage(sendEmails ? "다이제스트 생성 및 발송 중..." : "다이제스트 생성 중...");
     setResult(null);
 
     try {
-      const payload: Record<string, unknown> = {};
-      if (sendEmails) {
-        payload.sendEmails = true;
-        if (recipientsArray.length > 0) {
-          payload.recipients = recipientsArray;
-        }
-      }
+      const payload: Record<string, unknown> = sendEmails
+        ? {
+            sendEmails: true,
+            ...(recipientsArray.length > 0 ? { recipients: recipientsArray } : {}),
+          }
+        : {};
 
       const response = await fetch("/api/digests/run", {
         method: "POST",
