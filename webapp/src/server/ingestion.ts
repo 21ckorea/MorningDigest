@@ -1,6 +1,7 @@
 import Parser from "rss-parser";
 
 import type { DigestArticle, DigestIssue, KeywordGroup } from "@/types";
+import { computeNextDeliveryLabel, isWithinSendWindow, SEND_WINDOW_MINUTES } from "./schedule";
 import { createDigestIssue, listKeywordGroups } from "./store";
 
 const parser = new Parser({
@@ -175,10 +176,16 @@ export async function generateDigestForGroup(groupId: string) {
 
 export async function generateDigestsForActiveGroups(targetGroupIds?: string[]) {
   const groups = await listKeywordGroups();
+  const hasExplicitTargets = Boolean(targetGroupIds?.length);
   const selected = groups.filter((group) => {
+    if (hasExplicitTargets) {
+      return targetGroupIds!.includes(group.id);
+    }
     if (group.status !== "active") return false;
-    if (!targetGroupIds) return true;
-    return targetGroupIds.includes(group.id);
+    return isWithinSendWindow(
+      { timezone: group.timezone, sendTime: group.sendTime, days: group.days },
+      SEND_WINDOW_MINUTES
+    );
   });
 
   const results: Array<{

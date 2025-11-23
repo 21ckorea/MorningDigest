@@ -15,6 +15,7 @@ import type {
 } from "@/types";
 
 import { sql } from "./db";
+import { computeNextDeliveryLabel } from "./schedule";
 
 type KeywordRow = {
   id: string;
@@ -34,8 +35,8 @@ function mapKeyword(row: KeywordRow): Keyword {
   };
 }
 
-function buildNextDeliveryLabel(sendTime: string) {
-  return `다음 ${sendTime}`;
+function buildNextDeliveryLabel(data: { timezone: string; sendTime: string; days: string[] }) {
+  return computeNextDeliveryLabel({ timezone: data.timezone, sendTime: data.sendTime, days: data.days });
 }
 
 type KeywordGroupRow = {
@@ -596,7 +597,7 @@ export async function createKeywordGroup(data: {
 }) {
   await initPromise;
   const id = randomUUID();
-  const nextDelivery = buildNextDeliveryLabel(data.sendTime);
+  const nextDelivery = buildNextDeliveryLabel({ timezone: data.timezone, sendTime: data.sendTime, days: data.days });
   await sql`
     INSERT INTO keyword_groups (id, name, description, timezone, send_time, days, status, next_delivery, recipients)
     VALUES (${id}, ${data.name}, ${data.description}, ${data.timezone}, ${data.sendTime}, ${data.days}, 'active', ${nextDelivery}, ${data.recipients ?? []})
@@ -651,7 +652,7 @@ export async function updateKeywordGroup(data: {
         days = ${data.days},
         status = ${data.status},
         recipients = ${data.recipients ?? []},
-        next_delivery = ${buildNextDeliveryLabel(data.sendTime)}
+        next_delivery = ${buildNextDeliveryLabel({ timezone: data.timezone, sendTime: data.sendTime, days: data.days })}
     WHERE id = ${data.id}
   `;
 

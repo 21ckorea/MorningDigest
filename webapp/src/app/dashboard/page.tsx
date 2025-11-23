@@ -1,4 +1,4 @@
-import { Activity, Mail, Sparkles, TriangleAlert } from "lucide-react";
+import { Activity, CheckCircle2, Mail, Sparkles, TriangleAlert } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { DigestRunPanel } from "@/components/digest-run-panel";
@@ -10,11 +10,15 @@ export default async function DashboardPage() {
   const [keywordGroups, digestIssues, deliveryLogs] = await Promise.all([
     listKeywordGroups(),
     listRecentDigestIssues(3),
-    listRecentDeliveryLogs(5),
+    listRecentDeliveryLogs(20),
   ]);
 
   const pendingDigests = digestIssues.filter((issue) => issue.status !== "sent");
   const latestIssues = digestIssues;
+  const failedLogs = deliveryLogs.filter((log) => log.status !== "sent");
+  const successCount = deliveryLogs.length - failedLogs.length;
+  const failureCount = failedLogs.length;
+  const successRate = deliveryLogs.length === 0 ? null : Math.round((successCount / deliveryLogs.length) * 100);
 
   const formatKSTDate = (value: string) => {
     const date = new Date(value);
@@ -45,7 +49,7 @@ export default async function DashboardPage() {
       title="모닝 다이제스트 개요"
       description="오늘 발송 현황과 주요 알림을 한눈에 확인하세요."
     >
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-4">
         <StatCard
           title="총 구독자"
           value={totalSubscribers.toLocaleString()}
@@ -63,6 +67,12 @@ export default async function DashboardPage() {
           value={`${pendingDigests.length}건`}
           helper="Cron · Queue 모니터링"
           icon={<Mail className="h-5 w-5" />}
+        />
+        <StatCard
+          title="최근 성공률"
+          value={successRate === null ? "—" : `${successRate}%`}
+          helper={deliveryLogs.length === 0 ? "로그 없음" : `성공 ${successCount} · 실패 ${failureCount}`}
+          icon={<CheckCircle2 className="h-5 w-5" />}
         />
       </section>
 
@@ -114,26 +124,19 @@ export default async function DashboardPage() {
             <TriangleAlert className="h-4 w-4 text-amber-500" />
             <h2 className="font-semibold">알림 & 로그</h2>
           </div>
-          {deliveryLogs.length === 0 ? (
-            <p className="text-sm text-slate-500">최근 발송 기록이 없어 알림을 표시할 수 없습니다.</p>
+          {failedLogs.length === 0 ? (
+            <p className="text-sm text-slate-500">최근 20건 내 실패 로그가 없습니다. 모든 메일이 정상 발송됐어요.</p>
           ) : (
             <div className="space-y-3">
-              {deliveryLogs.slice(0, 3).map((log) => (
+              {failedLogs.slice(0, 3).map((log) => (
                 <article
                   key={log.id}
-                  className={`rounded-2xl border px-4 py-3 text-sm ${
-                    log.status === "sent"
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                      : "border-rose-200 bg-rose-50 text-rose-700"
-                  }`}
+                  className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
                 >
                   <p className="text-xs uppercase tracking-wide">{formatKSTDateTime(log.sentAt)}</p>
-                  <p className="mt-1 font-semibold">
-                    {log.status === "sent" ? `${log.groupName} 발송 성공` : `${log.groupName} 발송 실패`}
-                  </p>
-                  <p className="text-xs text-current">
-                    {log.recipient} · {log.provider}
-                  </p>
+                  <p className="mt-1 font-semibold">{log.groupName} 발송 실패</p>
+                  <p className="text-xs text-current">{log.recipient} · {log.provider}</p>
+                  <p className="mt-1 text-xs text-current">{log.error ?? "오류 메시지가 기록되지 않았습니다."}</p>
                 </article>
               ))}
             </div>
@@ -154,9 +157,11 @@ export default async function DashboardPage() {
                   <tr className="text-xs uppercase tracking-wide text-slate-500">
                     <th className="pb-2">시간</th>
                     <th className="pb-2">그룹</th>
+                    <th className="pb-2">제목</th>
                     <th className="pb-2">수신자</th>
                     <th className="pb-2">상태</th>
                     <th className="pb-2">프로바이더</th>
+                    <th className="pb-2">메시지</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -164,6 +169,7 @@ export default async function DashboardPage() {
                     <tr key={log.id}>
                       <td className="py-2 text-slate-500">{formatKSTDateTime(log.sentAt)}</td>
                       <td className="py-2 font-medium text-slate-800">{log.groupName}</td>
+                      <td className="py-2 text-slate-600">{log.subject}</td>
                       <td className="py-2 text-slate-500">{log.recipient}</td>
                       <td className="py-2">
                         <span
@@ -177,6 +183,9 @@ export default async function DashboardPage() {
                         </span>
                       </td>
                       <td className="py-2 text-slate-500">{log.provider}</td>
+                      <td className="py-2 text-xs text-slate-500">
+                        {log.status === "sent" ? "전송 완료" : log.error ?? "오류 정보 없음"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

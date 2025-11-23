@@ -2,6 +2,9 @@ import { AppShell } from "@/components/app-shell";
 import { KeywordManager } from "@/components/keyword-manager";
 import { listKeywordGroups, listKeywords } from "@/server/store";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function KeywordsPage() {
   const [keywords, groups] = await Promise.all([listKeywords(), listKeywordGroups()]);
 
