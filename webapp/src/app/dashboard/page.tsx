@@ -143,7 +143,7 @@ export default async function DashboardPage() {
           )}
         </section>
 
-        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
           <div className="flex items-center gap-2">
             <TriangleAlert className="h-4 w-4 text-amber-500" />
             <h2 className="font-semibold">최근 발송 로그</h2>
