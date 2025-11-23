@@ -13,6 +13,22 @@ export default async function AdminUsersPage() {
     redirect("/login");
   }
 
+function formatKST(value?: string | null) {
+  if (!value) return "—";
+  try {
+    return new Intl.DateTimeFormat("ko-KR", {
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
   if (!isAdminEmail(session.user.email)) {
     redirect("/dashboard");
   }
@@ -59,8 +75,8 @@ export default async function AdminUsersPage() {
                           {user.role === "admin" ? "관리자" : "일반"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-slate-500">{user.createdAt ?? "—"}</td>
-                      <td className="px-4 py-3 text-slate-500">{user.lastLoginAt ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-500">{formatKST(user.createdAt)}</td>
+                      <td className="px-4 py-3 text-slate-500">{formatKST(user.lastLoginAt)}</td>
                     </tr>
                   ))
                 )}

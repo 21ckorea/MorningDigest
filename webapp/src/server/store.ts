@@ -114,9 +114,9 @@ type UserRow = {
   email: string;
   image: string | null;
   role: string;
-  email_verified: string | null;
-  created_at: string;
-  last_login_at: string | null;
+  emailVerified: string | null;
+  createdAt: string;
+  lastLoginAt: string | null;
 };
 
 type DigestArticleInput = {
@@ -137,6 +137,7 @@ type CreateDigestIssueInput = {
 };
 
 const initPromise = initializeSchema();
+export const schemaReady = initPromise;
 
 function getSeoulDateString(date = new Date()) {
   const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -149,26 +150,28 @@ function getSeoulDateString(date = new Date()) {
 }
 
 async function initializeSchema() {
+  await sql`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`;
+
   await sql`
     CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
       name TEXT,
       email TEXT UNIQUE NOT NULL,
-      email_verified TIMESTAMPTZ,
+      "emailVerified" TIMESTAMPTZ,
       image TEXT,
       role TEXT NOT NULL DEFAULT 'member',
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      last_login_at TIMESTAMPTZ
+      "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      "lastLoginAt" TIMESTAMPTZ
     );
   `;
 
   await sql`
     CREATE TABLE IF NOT EXISTS accounts (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      id TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
+      "userId" TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       type TEXT NOT NULL,
       provider TEXT NOT NULL,
-      provider_account_id TEXT NOT NULL,
+      "providerAccountId" TEXT NOT NULL,
       refresh_token TEXT,
       access_token TEXT,
       expires_at BIGINT,
@@ -177,17 +180,59 @@ async function initializeSchema() {
       id_token TEXT,
       session_state TEXT,
       refresh_token_expires_in BIGINT,
-      UNIQUE (provider, provider_account_id)
+      UNIQUE (provider, "providerAccountId")
     );
   `;
 
   await sql`
     CREATE TABLE IF NOT EXISTS sessions (
-      id TEXT PRIMARY KEY,
-      session_token TEXT UNIQUE NOT NULL,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      id TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
+      "sessionToken" TEXT UNIQUE NOT NULL,
+      "userId" TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       expires TIMESTAMPTZ NOT NULL
     );
+  `;
+
+  await sql`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'email_verified'
+      ) THEN
+        EXECUTE 'ALTER TABLE users RENAME COLUMN email_verified TO "emailVerified"';
+      END IF;
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'created_at'
+      ) THEN
+        EXECUTE 'ALTER TABLE users RENAME COLUMN created_at TO "createdAt"';
+      END IF;
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'last_login_at'
+      ) THEN
+        EXECUTE 'ALTER TABLE users RENAME COLUMN last_login_at TO "lastLoginAt"';
+      END IF;
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name = 'accounts' AND column_name = 'user_id'
+      ) THEN
+        EXECUTE 'ALTER TABLE accounts RENAME COLUMN user_id TO "userId"';
+      END IF;
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name = 'accounts' AND column_name = 'provider_account_id'
+      ) THEN
+        EXECUTE 'ALTER TABLE accounts RENAME COLUMN provider_account_id TO "providerAccountId"';
+      END IF;
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name = 'sessions' AND column_name = 'session_token'
+      ) THEN
+        EXECUTE 'ALTER TABLE sessions RENAME COLUMN session_token TO "sessionToken"';
+      END IF;
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name = 'sessions' AND column_name = 'user_id'
+      ) THEN
+        EXECUTE 'ALTER TABLE sessions RENAME COLUMN user_id TO "userId"';
+      END IF;
+    END
+    $$;
   `;
 
   await sql`
@@ -349,9 +394,9 @@ function mapUser(row: UserRow): User {
     email: row.email,
     image: row.image,
     role: (row.role as User["role"]) ?? "member",
-    emailVerified: row.email_verified,
-    createdAt: row.created_at,
-    lastLoginAt: row.last_login_at,
+    emailVerified: row.emailVerified,
+    createdAt: row.createdAt,
+    lastLoginAt: row.lastLoginAt,
   };
 }
 
@@ -435,11 +480,11 @@ export async function listUsers(): Promise<User[]> {
            email,
            image,
            role,
-           to_char(email_verified, 'YYYY-MM-DD"T"HH24:MI:SSZ') as email_verified,
-           to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SSZ') as created_at,
-           to_char(last_login_at, 'YYYY-MM-DD"T"HH24:MI:SSZ') as last_login_at
+           to_char("emailVerified", 'YYYY-MM-DD"T"HH24:MI:SSZ') as "emailVerified",
+           to_char("createdAt", 'YYYY-MM-DD"T"HH24:MI:SSZ') as "createdAt",
+           to_char("lastLoginAt", 'YYYY-MM-DD"T"HH24:MI:SSZ') as "lastLoginAt"
     FROM users
-    ORDER BY created_at DESC
+    ORDER BY "createdAt" DESC
   `) as UserRow[];
 
   return rows.map(mapUser);
