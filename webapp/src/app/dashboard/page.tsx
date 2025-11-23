@@ -1,16 +1,15 @@
-import { Activity, CheckCircle2, Mail, Sparkles, TriangleAlert } from "lucide-react";
+import { Activity, CheckCircle2, Sparkles, TriangleAlert } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { DigestRunPanel } from "@/components/digest-run-panel";
-import { listKeywordGroups, listRecentDeliveryLogs, listRecentDigestIssues } from "@/server/store";
-
-const totalSubscribers = 2431;
+import { listKeywordGroups, listRecentDeliveryLogs, listRecentDigestIssues, listUsers } from "@/server/store";
 
 export default async function DashboardPage() {
-  const [keywordGroups, digestIssues, deliveryLogs] = await Promise.all([
+  const [keywordGroups, digestIssues, deliveryLogs, users] = await Promise.all([
     listKeywordGroups(),
     listRecentDigestIssues(3),
     listRecentDeliveryLogs(20),
+    listUsers(),
   ]);
 
   const pendingDigests = digestIssues.filter((issue) => issue.status !== "sent");
@@ -51,9 +50,9 @@ export default async function DashboardPage() {
     >
       <section className="grid gap-4 md:grid-cols-4">
         <StatCard
-          title="총 구독자"
-          value={totalSubscribers.toLocaleString()}
-          helper="무료 플랜 한도 내"
+          title="회원 수"
+          value={`${users.length.toLocaleString()}명`}
+          helper="Google OAuth 가입 기준"
           icon={<Activity className="h-5 w-5" />}
         />
         <StatCard
@@ -61,12 +60,6 @@ export default async function DashboardPage() {
           value={`${keywordGroups.length}개`}
           helper="타임존 자동 조정"
           icon={<Sparkles className="h-5 w-5" />}
-        />
-        <StatCard
-          title="발송 대기"
-          value={`${pendingDigests.length}건`}
-          helper="Cron · Queue 모니터링"
-          icon={<Mail className="h-5 w-5" />}
         />
         <StatCard
           title="최근 성공률"
