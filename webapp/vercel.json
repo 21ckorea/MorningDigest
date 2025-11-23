@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/digests/run?sendEmails=true&bypassSchedule=true",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}

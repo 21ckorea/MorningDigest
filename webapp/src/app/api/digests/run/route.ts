@@ -57,9 +57,10 @@ export async function GET(request: Request) {
   const sendEmails = url.searchParams.get("sendEmails") === "true";
   const recipientsParam = url.searchParams.get("recipients");
   const recipients = recipientsParam?.split(",").map((email) => email.trim()).filter(Boolean);
+  const bypassSchedule = url.searchParams.get("bypassSchedule") === "true";
 
   const result = await generateDigestsForActiveGroups(groupIds && groupIds.length ? groupIds : undefined, {
-    bypassSchedule: sendEmails,
+    bypassSchedule,
   });
   const dispatch = sendEmails
     ? await Promise.all(
