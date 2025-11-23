@@ -80,7 +80,7 @@ export function AppShell({ title, description, action, children }: AppShellProps
         </div>
       </aside>
 
-      <div className="flex flex-1 flex-col lg:pl-64">
+      <div className="flex flex-1 flex-col">
         <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur lg:px-8">
           <div className="flex items-center justify-between gap-3">
             <button

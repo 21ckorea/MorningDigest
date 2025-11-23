@@ -23,7 +23,9 @@ export async function POST(request: Request) {
     const json = await request.json().catch(() => ({}));
     const body = payloadSchema.parse(json);
 
-    const result = await generateDigestsForActiveGroups(body.groupIds);
+    const result = await generateDigestsForActiveGroups(body.groupIds, {
+      bypassSchedule: body.sendEmails === true,
+    });
     const dispatch = body.sendEmails
       ? await Promise.all(
           result
@@ -56,7 +58,9 @@ export async function GET(request: Request) {
   const recipientsParam = url.searchParams.get("recipients");
   const recipients = recipientsParam?.split(",").map((email) => email.trim()).filter(Boolean);
 
-  const result = await generateDigestsForActiveGroups(groupIds && groupIds.length ? groupIds : undefined);
+  const result = await generateDigestsForActiveGroups(groupIds && groupIds.length ? groupIds : undefined, {
+    bypassSchedule: sendEmails,
+  });
   const dispatch = sendEmails
     ? await Promise.all(
         result

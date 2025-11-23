@@ -174,14 +174,19 @@ export async function generateDigestForGroup(groupId: string) {
   });
 }
 
-export async function generateDigestsForActiveGroups(targetGroupIds?: string[]) {
+export async function generateDigestsForActiveGroups(
+  targetGroupIds?: string[],
+  options?: { bypassSchedule?: boolean }
+) {
   const groups = await listKeywordGroups();
   const hasExplicitTargets = Boolean(targetGroupIds?.length);
+  const shouldBypassSchedule = options?.bypassSchedule ?? false;
   const selected = groups.filter((group) => {
     if (hasExplicitTargets) {
       return targetGroupIds!.includes(group.id);
     }
     if (group.status !== "active") return false;
+    if (shouldBypassSchedule) return true;
     return isWithinSendWindow(
       { timezone: group.timezone, sendTime: group.sendTime, days: group.days },
       SEND_WINDOW_MINUTES
