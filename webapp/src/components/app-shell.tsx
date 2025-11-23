@@ -6,14 +6,16 @@ import {
   Settings,
   Tags,
   UserCircle,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { ReactNode, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
-const navItems = [
+const baseNavItems = [
   { label: "대시보드", href: "/dashboard", icon: LayoutDashboard },
   { label: "키워드", href: "/keywords", icon: Tags },
   { label: "설정", href: "/settings", icon: Settings },
@@ -29,6 +31,29 @@ interface AppShellProps {
 export function AppShell({ title, description, action, children }: AppShellProps) {
   const pathname = usePathname();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const { data: session, status } = useSession();
+  const user = session?.user;
+
+  const userLabel = useMemo(() => {
+    if (user?.name) return user.name;
+    if (user?.email) return user.email;
+    return "내 계정";
+  }, [user?.name, user?.email]);
+
+  const handleLogin = () => {
+    void signIn("google", { callbackUrl: "/dashboard" });
+  };
+
+  const handleLogout = () => {
+    void signOut({ callbackUrl: "/" });
+  };
+
+  const navItems = useMemo(() => {
+    if (user?.role === "admin") {
+      return [...baseNavItems, { label: "회원 관리", href: "/admin/users", icon: Users }];
+    }
+    return baseNavItems;
+  }, [user?.role]);
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -99,10 +124,30 @@ export function AppShell({ title, description, action, children }: AppShellProps
             </div>
             <div className="flex items-center gap-3">
               {action}
-              <button className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700">
-                <UserCircle className="h-4 w-4" />
-                My Account
-              </button>
+              {status === "loading" ? (
+                <div className="animate-pulse rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500">
+                  계정 확인 중...
+                </div>
+              ) : user ? (
+                <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm">
+                  <UserCircle className="h-4 w-4 text-slate-500" />
+                  <span className="font-medium text-slate-800">{userLabel}</span>
+                  <button
+                    onClick={handleLogout}
+                    className="rounded-full bg-slate-900 px-2 py-1 text-xs font-semibold text-white"
+                  >
+                    로그아웃
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleLogin}
+                  className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+                >
+                  <UserCircle className="h-4 w-4" />
+                  Google 로그인
+                </button>
+              )}
             </div>
           </div>
         </header>

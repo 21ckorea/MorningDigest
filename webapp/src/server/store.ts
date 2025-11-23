@@ -12,6 +12,7 @@ import type {
   Keyword,
   KeywordGroup,
   KeywordPriority,
+  User,
 } from "@/types";
 
 import { sql } from "./db";
@@ -107,6 +108,17 @@ type NotificationSettingRow = {
   send_weekly_report: boolean;
 };
 
+type UserRow = {
+  id: string;
+  name: string | null;
+  email: string;
+  image: string | null;
+  role: string;
+  email_verified: string | null;
+  created_at: string;
+  last_login_at: string | null;
+};
+
 type DigestArticleInput = {
   headline: string;
   summary: string;
@@ -137,6 +149,56 @@ function getSeoulDateString(date = new Date()) {
 }
 
 async function initializeSchema() {
+  await sql`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      name TEXT,
+      email TEXT UNIQUE NOT NULL,
+      email_verified TIMESTAMPTZ,
+      image TEXT,
+      role TEXT NOT NULL DEFAULT 'member',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      last_login_at TIMESTAMPTZ
+    );
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS accounts (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      provider_account_id TEXT NOT NULL,
+      refresh_token TEXT,
+      access_token TEXT,
+      expires_at BIGINT,
+      token_type TEXT,
+      scope TEXT,
+      id_token TEXT,
+      session_state TEXT,
+      refresh_token_expires_in BIGINT,
+      UNIQUE (provider, provider_account_id)
+    );
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      session_token TEXT UNIQUE NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expires TIMESTAMPTZ NOT NULL
+    );
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS verification_tokens (
+      identifier TEXT NOT NULL,
+      token TEXT NOT NULL,
+      expires TIMESTAMPTZ NOT NULL,
+      PRIMARY KEY (identifier, token)
+    );
+  `;
+
   await sql`
     CREATE TABLE IF NOT EXISTS keywords (
       id TEXT PRIMARY KEY,
@@ -280,6 +342,19 @@ function mapNotificationSetting(row: NotificationSettingRow): NotificationSettin
   };
 }
 
+function mapUser(row: UserRow): User {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    image: row.image,
+    role: (row.role as User["role"]) ?? "member",
+    emailVerified: row.email_verified,
+    createdAt: row.created_at,
+    lastLoginAt: row.last_login_at,
+  };
+}
+
 export async function recordDeliveryLog(input: {
   issueId: string;
   groupName: string;
@@ -350,6 +425,24 @@ export async function listDeliverySettings(): Promise<DeliverySetting[]> {
   `) as DeliverySettingRow[];
 
   return rows.map(mapDeliverySetting);
+}
+
+export async function listUsers(): Promise<User[]> {
+  await initPromise;
+  const rows = (await sql`
+    SELECT id,
+           name,
+           email,
+           image,
+           role,
+           to_char(email_verified, 'YYYY-MM-DD"T"HH24:MI:SSZ') as email_verified,
+           to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SSZ') as created_at,
+           to_char(last_login_at, 'YYYY-MM-DD"T"HH24:MI:SSZ') as last_login_at
+    FROM users
+    ORDER BY created_at DESC
+  `) as UserRow[];
+
+  return rows.map(mapUser);
 }
 
 export async function updateDeliverySetting(data: {

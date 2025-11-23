@@ -87,3 +87,16 @@ export interface ActivityLog {
   message: string;
   timestamp: string;
 }
+
+export type UserRole = "admin" | "member";
+
+export interface User {
+  id: string;
+  name: string | null;
+  email: string;
+  image: string | null;
+  role: UserRole;
+  emailVerified: string | null;
+  createdAt: string;
+  lastLoginAt: string | null;
+}
