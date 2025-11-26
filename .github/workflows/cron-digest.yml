@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Call MorningDigest cron trigger
         env:
-          CRON_ENDPOINT: https://morningdigest.vercel.app/api/cron/trigger
+          CRON_ENDPOINT: ${{ secrets.CRON_ENDPOINT }}/api/cron/trigger
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           if [ -z "$CRON_SECRET" ]; then
