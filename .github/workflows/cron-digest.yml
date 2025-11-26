@@ -14,13 +14,21 @@ jobs:
           CRON_ENDPOINT: ${{ secrets.CRON_ENDPOINT }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          if [ -z "$CRON_SECRET" ]; then
+          if [ -z "$CRON_SECRET" ]; then 
             echo "CRON_SECRET is not set in repository secrets" >&2
             exit 1
           fi
-          http_code=$(curl -s -o response.json -w "%{http_code}" -X POST "$CRON_ENDPOINT" -H "x-cron-secret: $CRON_SECRET")
+          
+          # 👇 이 줄은 그대로 유지합니다.
+          http_code=$(curl -s -o response.json -w "%{http_code}" -X POST "${CRON_ENDPOINT}" -H "x-cron-secret: ${CRON_SECRET}")
+          
+          # 👇 디버깅을 위해 이 3줄을 추가/수정합니다.
+          echo "--- Vercel Response Debug ---"
+          echo "HTTP Status Code: $http_code"
           cat response.json
+          echo "-----------------------------"
+          
           if [ "$http_code" -ge 400 ]; then
-            echo "Request failed with status $http_code" >&2
+            echo "Error: Request failed with status $http_code. See response.json for details." >&2
             exit 1
           fi
