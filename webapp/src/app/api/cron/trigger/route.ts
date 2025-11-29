@@ -7,6 +7,12 @@ const cronSecret = process.env.CRON_SECRET;
 
 async function runDigestJob() {
   const result = await generateDigestsForActiveGroups(undefined, { bypassSchedule: false });
+  console.info("[cron] generateDigestsForActiveGroups result", {
+    timestamp: new Date().toISOString(),
+    groupsProcessed: result.length,
+    successes: result.filter((item) => item.issue).length,
+    failures: result.filter((item) => item.error).length,
+  });
   const dispatch = await Promise.all(
     result
       .filter((item) => item.issue)
@@ -36,6 +42,12 @@ export async function POST(request: Request) {
 
   try {
     const { result, dispatch } = await runDigestJob();
+    console.info("[cron] dispatchDigestIssue summary", {
+      timestamp: new Date().toISOString(),
+      groupsProcessed: result.length,
+      successes: result.filter((item) => item.issue).length,
+      failures: result.filter((item) => item.error).length,
+    });
     return NextResponse.json({
       ok: true,
       stats: {
