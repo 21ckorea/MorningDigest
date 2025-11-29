@@ -6,7 +6,7 @@ import { generateDigestsForActiveGroups } from "@/server/ingestion";
 const cronSecret = process.env.CRON_SECRET;
 
 async function runDigestJob() {
-  const result = await generateDigestsForActiveGroups(undefined, { bypassSchedule: true });
+  const result = await generateDigestsForActiveGroups(undefined, { bypassSchedule: false });
   const dispatch = await Promise.all(
     result
       .filter((item) => item.issue)

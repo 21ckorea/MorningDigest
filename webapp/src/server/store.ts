@@ -970,3 +970,61 @@ export async function resetStores() {
     }
   }
 }
+
+function getSeoulDateOnly(date = new Date()) {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return formatter.format(date);
+}
+
+export async function digestIssueExists(groupId: string, date: string): Promise<boolean> {
+  const row = await sql`
+    SELECT 1
+    FROM digest_issues
+    WHERE group_id = ${groupId} AND send_date = ${date}
+  `;
+  return row.length > 0;
+}
+
+export async function getMostRecentDigestIssue(groupId: string): Promise<DigestIssue | null> {
+  const issueRow = (await sql`
+    SELECT di.id,
+           di.group_id,
+           di.send_date::text,
+           di.subject,
+           di.highlights,
+           di.status,
+           di.article_count,
+           to_char(di.generated_at, 'YYYY-MM-DD"T"HH24:MI:SSZ') as generated_at,
+           kg.name as group_name
+    FROM digest_issues di
+    JOIN keyword_groups kg ON kg.id = di.group_id
+    WHERE di.group_id = ${groupId}
+    ORDER BY di.generated_at DESC
+    LIMIT 1
+  `) as DigestIssueRow[];
+
+  if (!issueRow.length) {
+    return null;
+  }
+
+  const articleRows = (await sql`
+    SELECT id,
+           issue_id,
+           headline,
+           summary,
+           source_name,
+           source_url,
+           to_char(published_at, 'YYYY-MM-DD"T"HH24:MI:SSZ') as published_at,
+           relevance_score
+    FROM digest_articles
+    WHERE issue_id = ${issueRow[0].id}
+    ORDER BY published_at DESC
+  `) as DigestArticleRow[];
+
+  return mapDigestIssue(issueRow[0], articleRows);
+}

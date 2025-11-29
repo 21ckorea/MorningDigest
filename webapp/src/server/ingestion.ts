@@ -2,7 +2,7 @@ import Parser from "rss-parser";
 
 import type { DigestArticle, DigestIssue, KeywordGroup } from "@/types";
 import { computeNextDeliveryLabel, isWithinSendWindow, SEND_WINDOW_MINUTES } from "./schedule";
-import { createDigestIssue, listKeywordGroups } from "./store";
+import { createDigestIssue, listKeywordGroups, digestIssueExists } from "./store";
 
 const parser = new Parser({
   customFields: {
@@ -181,6 +181,7 @@ export async function generateDigestsForActiveGroups(
   const groups = await listKeywordGroups();
   const hasExplicitTargets = Boolean(targetGroupIds?.length);
   const shouldBypassSchedule = options?.bypassSchedule ?? false;
+  const today = formatSeoulDate(new Date());
   const selected = groups.filter((group) => {
     if (hasExplicitTargets) {
       return targetGroupIds!.includes(group.id);
@@ -201,6 +202,10 @@ export async function generateDigestsForActiveGroups(
 
   for (const group of selected) {
     try {
+      if (await digestIssueExists(group.id, today)) {
+        results.push({ groupId: group.id, error: "Digest already sent for today; skipping." });
+        continue;
+      }
       const issue = await generateDigestForGroup(group.id);
       results.push({ groupId: group.id, issue });
     } catch (error) {
