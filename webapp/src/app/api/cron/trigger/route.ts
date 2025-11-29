@@ -21,8 +21,15 @@ async function runDigestJob() {
 
 export async function POST(request: Request) {
   if (cronSecret) {
-    const provided = request.headers.get("x-cron-secret");
-    if (provided !== cronSecret) {
+    const providedLegacy = request.headers.get("x-cron-secret");
+    const providedAuth = request.headers.get("authorization");
+    const expectedAuth = `Bearer ${cronSecret}`;
+
+    const authorized =
+      providedLegacy === cronSecret ||
+      (typeof providedAuth === "string" && providedAuth.trim() === expectedAuth);
+
+    if (!authorized) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
   }
