@@ -1,4 +1,4 @@
-name: Scheduled Digest Runner
+name: Scheduled Digest Runner # test-2025-11-30
 
 on:
   workflow_dispatch:
