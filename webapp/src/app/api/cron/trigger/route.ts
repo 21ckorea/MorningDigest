@@ -13,6 +13,7 @@ async function runDigestJob() {
     groupsProcessed: result.length,
     successes: result.filter((item) => item.issue).length,
     failures: result.filter((item) => item.error).length,
+    details: result,
   });
   const dispatch = await Promise.all(
     result
@@ -52,6 +53,8 @@ export async function POST(request: Request) {
       groupsProcessed: result.length,
       successes: result.filter((item) => item.issue).length,
       failures: result.filter((item) => item.error).length,
+      groupErrors: result.filter((item) => item.error),
+      dispatch,
     });
     return NextResponse.json({
       ok: true,

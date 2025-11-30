@@ -203,15 +203,27 @@ export async function generateDigestsForActiveGroups(
   for (const group of selected) {
     try {
       if (await digestIssueExists(group.id, today)) {
-        results.push({ groupId: group.id, error: "Digest already sent for today; skipping." });
+        const message = "Digest already sent for today; skipping.";
+        console.info("[cron] skip existing digest", {
+          groupId: group.id,
+          groupName: group.name,
+          reason: message,
+        });
+        results.push({ groupId: group.id, error: message });
         continue;
       }
       const issue = await generateDigestForGroup(group.id);
       results.push({ groupId: group.id, issue });
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      console.error("[cron] generateDigestForGroup error", {
+        groupId: group.id,
+        groupName: group.name,
+        error: message,
+      });
       results.push({
         groupId: group.id,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: message,
       });
     }
   }

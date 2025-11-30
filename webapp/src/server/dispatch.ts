@@ -32,6 +32,12 @@ export async function dispatchDigestIssue(issue: DigestIssue, recipients?: strin
 
   for (const recipient of targets) {
     try {
+      console.info("[dispatch] sending digest email", {
+        issueId: issue.id,
+        groupId: issue.groupId,
+        groupName: issue.groupName,
+        recipient,
+      });
       const { providerLabel, messageId } = await sendDigestEmail(issue, recipient);
       await recordDeliveryLog({
         issueId: issue.id,
@@ -41,6 +47,14 @@ export async function dispatchDigestIssue(issue: DigestIssue, recipients?: strin
         provider: providerLabel,
         status: "sent",
         providerMessageId: messageId,
+      });
+      console.info("[dispatch] email sent", {
+        issueId: issue.id,
+        groupId: issue.groupId,
+        groupName: issue.groupName,
+        recipient,
+        providerLabel,
+        messageId,
       });
       results.push({ recipient, status: "sent", providerLabel, messageId });
     } catch (error) {
@@ -52,6 +66,13 @@ export async function dispatchDigestIssue(issue: DigestIssue, recipients?: strin
         recipient,
         provider: "mailer",
         status: "failed",
+        error: message,
+      });
+      console.error("[dispatch] email failed", {
+        issueId: issue.id,
+        groupId: issue.groupId,
+        groupName: issue.groupName,
+        recipient,
         error: message,
       });
       results.push({ recipient, status: "failed", error: message });
