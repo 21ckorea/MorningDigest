@@ -800,6 +800,14 @@ export async function updateKeywordGroup(data: {
     WHERE id = ${data.id}
   `;
 
+  // 그룹 설정이 바뀐 경우, 오늘 이미 생성된 digest 이슈는 제거하여
+  // 새 설정으로 다시 발송될 수 있도록 처리합니다.
+  const today = getSeoulDateString();
+  await sql`
+    DELETE FROM digest_issues
+    WHERE group_id = ${data.id} AND send_date = ${today}
+  `;
+
   await sql`
     DELETE FROM group_keywords WHERE group_id = ${data.id}
   `;
