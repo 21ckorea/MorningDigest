@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { generateDigestsForActiveGroups } from "@/server/ingestion";
 import { dispatchDigestIssue } from "@/server/dispatch";
+import { getKeywordGroupById } from "@/server/store";
 
 const payloadSchema = z.object({
   groupIds: z.array(z.string().min(1)).optional(),
@@ -30,10 +31,19 @@ export async function POST(request: Request) {
       ? await Promise.all(
           result
             .filter((item) => item.issue)
-            .map(async (item) => ({
-              issueId: item.issue!.id,
-              recipients: await dispatchDigestIssue(item.issue!, body.recipients),
-            }))
+            .map(async (item) => {
+              const group = await getKeywordGroupById(item.groupId);
+              const effectiveRecipients =
+                body.recipients && body.recipients.length
+                  ? body.recipients
+                  : group?.recipients && group.recipients.length
+                  ? group.recipients
+                  : undefined;
+              return {
+                issueId: item.issue!.id,
+                recipients: await dispatchDigestIssue(item.issue!, effectiveRecipients),
+              };
+            })
         )
       : undefined;
 
@@ -66,10 +76,19 @@ export async function GET(request: Request) {
     ? await Promise.all(
         result
           .filter((item) => item.issue)
-          .map(async (item) => ({
-            issueId: item.issue!.id,
-            recipients: await dispatchDigestIssue(item.issue!, recipients && recipients.length ? recipients : undefined),
-          }))
+          .map(async (item) => {
+            const group = await getKeywordGroupById(item.groupId);
+            const effectiveRecipients =
+              recipients && recipients.length
+                ? recipients
+                : group?.recipients && group.recipients.length
+                ? group.recipients
+                : undefined;
+            return {
+              issueId: item.issue!.id,
+              recipients: await dispatchDigestIssue(item.issue!, effectiveRecipients),
+            };
+          })
       )
     : undefined;
 

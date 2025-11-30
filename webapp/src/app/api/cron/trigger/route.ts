@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { dispatchDigestIssue } from "@/server/dispatch";
 import { generateDigestsForActiveGroups } from "@/server/ingestion";
+import { getKeywordGroupById } from "@/server/store";
 
 const cronSecret = process.env.CRON_SECRET;
 
@@ -16,10 +17,14 @@ async function runDigestJob() {
   const dispatch = await Promise.all(
     result
       .filter((item) => item.issue)
-      .map(async (item) => ({
-        issueId: item.issue!.id,
-        recipients: await dispatchDigestIssue(item.issue!),
-      }))
+      .map(async (item) => {
+        const group = await getKeywordGroupById(item.groupId);
+        const recipients = group?.recipients && group.recipients.length ? group.recipients : undefined;
+        return {
+          issueId: item.issue!.id,
+          recipients: await dispatchDigestIssue(item.issue!, recipients),
+        };
+      })
   );
 
   return { result, dispatch };

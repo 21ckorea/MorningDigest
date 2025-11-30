@@ -11,7 +11,7 @@ export interface DispatchResult {
   error?: string;
 }
 
-function resolveRecipients(): string[] {
+function resolveTestRecipients(): string[] {
   const raw = process.env.DIGEST_TEST_RECIPIENTS ?? process.env.DISPATCH_TEST_RECIPIENTS ?? "";
   return raw
     .split(",")
@@ -19,8 +19,15 @@ function resolveRecipients(): string[] {
     .filter(Boolean);
 }
 
-export async function dispatchDigestIssue(issue: DigestIssue, recipients = resolveRecipients()): Promise<DispatchResult[]> {
-  const targets = recipients.length > 0 ? recipients : ["dev@example.com"];
+export async function dispatchDigestIssue(issue: DigestIssue, recipients?: string[]): Promise<DispatchResult[]> {
+  const explicit = (recipients ?? []).filter(Boolean);
+  const testRecipients = resolveTestRecipients();
+  const targets =
+    explicit.length > 0
+      ? explicit
+      : testRecipients.length > 0
+      ? testRecipients
+      : ["dev@example.com"];
   const results: DispatchResult[] = [];
 
   for (const recipient of targets) {

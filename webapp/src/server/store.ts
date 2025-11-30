@@ -378,6 +378,12 @@ async function fetchKeywordGroupRow(id: string): Promise<KeywordGroupRow | null>
   return rows[0] ?? null;
 }
 
+export async function getKeywordGroupById(id: string): Promise<KeywordGroup | null> {
+  await initPromise;
+  const row = await fetchKeywordGroupRow(id);
+  return row ? mapGroup(row) : null;
+}
+
 function mapNotificationSetting(row: NotificationSettingRow): NotificationSetting {
   return {
     id: row.id,
