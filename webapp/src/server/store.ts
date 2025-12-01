@@ -486,6 +486,26 @@ export async function listDeliverySettings(): Promise<DeliverySetting[]> {
   return rows.map(mapDeliverySetting);
 }
 
+export async function listDeliverySettingsForUser(userId: string): Promise<DeliverySetting[]> {
+  await initPromise;
+  const rows = (await sql`
+    SELECT g.id as group_id,
+           g.name as group_name,
+           g.timezone,
+           g.send_time,
+           g.days,
+           ds.summary_length,
+           ds.template,
+           ds.channels
+    FROM keyword_groups g
+    LEFT JOIN delivery_settings ds ON ds.group_id = g.id
+    WHERE g.owner_id = ${userId}
+    ORDER BY g.created_at DESC
+  `) as DeliverySettingRow[];
+
+  return rows.map(mapDeliverySetting);
+}
+
 export async function listUsers(): Promise<User[]> {
   await initPromise;
   const rows = (await sql`

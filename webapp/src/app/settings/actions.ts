@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { updateDeliverySetting, updateNotificationSetting } from "@/server/store";
+import { getServerSession } from "next-auth";
+
+import { authOptions, isAdminEmail } from "@/server/auth";
+import { getKeywordGroupById, updateDeliverySetting, updateNotificationSetting } from "@/server/store";
 
 const deliverySchema = z.object({
   groupId: z.string().min(1),
@@ -13,6 +16,14 @@ const deliverySchema = z.object({
 });
 
 export async function updateDeliverySettingAction(formData: FormData) {
+  const session = await getServerSession(authOptions);
+  const email = session?.user?.email ?? null;
+  const userId = (session?.user as { id?: string } | null)?.id;
+
+  if (!session || !email || !userId) {
+    throw new Error("로그인이 필요합니다.");
+  }
+
   const raw = {
     groupId: formData.get("groupId"),
     summaryLength: formData.get("summaryLength"),
@@ -21,6 +32,18 @@ export async function updateDeliverySettingAction(formData: FormData) {
   };
 
   const data = deliverySchema.parse(raw);
+
+  const group = await getKeywordGroupById(data.groupId);
+  if (!group) {
+    throw new Error("그룹을 찾을 수 없습니다.");
+  }
+
+  const isOwner = group.ownerId === userId || group.ownerId == null;
+  const isAdmin = isAdminEmail(email);
+  if (!isOwner && !isAdmin) {
+    throw new Error("이 그룹의 발송 설정을 변경할 권한이 없습니다.");
+  }
+
   await updateDeliverySetting(data);
   revalidatePath("/settings");
 }

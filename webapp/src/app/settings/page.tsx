@@ -1,7 +1,10 @@
 import { Bell, Globe2, Mail, Smartphone } from "lucide-react";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
-import { getNotificationSetting, listDeliverySettings } from "@/server/store";
+import { authOptions, isAdminEmail } from "@/server/auth";
+import { getNotificationSetting, listDeliverySettings, listDeliverySettingsForUser } from "@/server/store";
 
 import { updateDeliverySettingAction, updateNotificationSettingAction } from "./actions";
 
@@ -24,8 +27,18 @@ const channelOptions = [
 ];
 
 export default async function SettingsPage() {
+  const session = await getServerSession(authOptions);
+  const email = session?.user?.email ?? null;
+  const userId = (session?.user as { id?: string } | null)?.id;
+
+  if (!session || !email || !userId) {
+    redirect("/login");
+  }
+
+  const isAdmin = isAdminEmail(email);
+
   const [settings, notificationSetting] = await Promise.all([
-    listDeliverySettings(),
+    isAdmin ? listDeliverySettings() : listDeliverySettingsForUser(userId),
     getNotificationSetting(),
   ]);
 
@@ -40,7 +53,9 @@ export default async function SettingsPage() {
             <div>
               <h2 className="text-lg font-semibold text-slate-900">그룹별 발송 설정</h2>
               <p className="text-sm text-slate-500">
-                무료 Cron · Queue 조합으로 운영 중입니다. 잦은 수정 시에도 별도 요금이 청구되지 않습니다.
+                {isAdmin
+                  ? "관리자 계정입니다. 전체 그룹의 발송 요약/템플릿을 조정할 수 있습니다."
+                  : "내가 소유한 그룹의 발송 요약/템플릿을 조정할 수 있습니다."}
               </p>
             </div>
           </div>
