@@ -46,11 +46,13 @@ interface ToastMessage {
 interface KeywordManagerProps {
   initialKeywords?: Keyword[];
   initialGroups?: KeywordGroup[];
+  isAdmin?: boolean;
 }
 
 export function KeywordManager({
   initialKeywords = defaultKeywords,
   initialGroups = defaultGroups,
+  isAdmin = false,
 }: KeywordManagerProps) {
   const [keywordList, setKeywordList] = useState<Keyword[]>(initialKeywords);
   const [groupList, setGroupList] = useState<KeywordGroup[]>(initialGroups);
@@ -453,8 +455,15 @@ export function KeywordManager({
         <div>
           <h2 className="text-lg font-semibold text-slate-900">키워드 & 그룹 관리</h2>
           <p className="text-sm text-slate-500">
-            그룹별 발송 조건을 조정하고 우선순위를 빠르게 확인하세요.
+            {isAdmin
+              ? "관리자 계정입니다. 전체 사용자의 그룹 구성을 확인할 수 있습니다."
+              : "내 계정의 키워드와 그룹 발송 조건을 관리할 수 있습니다."}
           </p>
+          {isAdmin ? (
+            <p className="mt-1 text-xs text-slate-400">
+              자세한 전체 그룹 구성은 상단 메뉴의 관리 영역(/admin/groups)에서 확인할 수 있습니다.
+            </p>
+          ) : null}
         </div>
         <div className="flex gap-2">
           <button

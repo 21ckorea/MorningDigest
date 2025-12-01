@@ -29,7 +29,7 @@ export default async function KeywordsPage() {
       title="키워드 & 그룹 관리"
       description="그룹별 발송 조건을 조정하고 우선순위를 빠르게 확인하세요."
     >
-      <KeywordManager initialKeywords={keywords} initialGroups={groups} />
+      <KeywordManager initialKeywords={keywords} initialGroups={groups} isAdmin={isAdmin} />
     </AppShell>
   );
 }
