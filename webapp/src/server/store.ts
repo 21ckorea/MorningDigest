@@ -52,6 +52,7 @@ type KeywordGroupRow = {
   created_at: string;
   keywords: any;
   recipients: string[];
+  owner_id: string | null;
 };
 
 type DigestIssueRow = {
@@ -265,13 +266,19 @@ async function initializeSchema() {
       status TEXT NOT NULL DEFAULT 'active',
       next_delivery TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      recipients TEXT[] NOT NULL DEFAULT '{}'
+      recipients TEXT[] NOT NULL DEFAULT '{}',
+      owner_id TEXT REFERENCES users(id)
     );
   `;
 
   await sql`
     ALTER TABLE keyword_groups
     ADD COLUMN IF NOT EXISTS recipients TEXT[] NOT NULL DEFAULT '{}'
+  `;
+
+  await sql`
+    ALTER TABLE keyword_groups
+    ADD COLUMN IF NOT EXISTS owner_id TEXT REFERENCES users(id)
   `;
 
   await sql`
@@ -355,6 +362,7 @@ async function fetchKeywordGroupRow(id: string): Promise<KeywordGroupRow | null>
       g.next_delivery,
       g.created_at,
       g.recipients,
+      g.owner_id,
       COALESCE(
         json_agg(
           DISTINCT jsonb_build_object(
@@ -624,6 +632,7 @@ function mapGroup(row: KeywordGroupRow): KeywordGroup {
     nextDelivery: row.next_delivery,
     keywords: (row.keywords as KeywordRow[] | null)?.map(mapKeyword) ?? [],
     recipients: row.recipients ?? [],
+    ownerId: row.owner_id ?? undefined,
   };
 }
 
@@ -709,10 +718,48 @@ export async function listKeywordGroups(): Promise<KeywordGroup[]> {
         ) FILTER (WHERE k.id IS NOT NULL),
         '[]'
       ) AS keywords,
-      g.recipients
+      g.recipients,
+      g.owner_id
     FROM keyword_groups g
     LEFT JOIN group_keywords gk ON gk.group_id = g.id
     LEFT JOIN keywords k ON k.id = gk.keyword_id
+    GROUP BY g.id
+    ORDER BY g.created_at DESC
+  `) as KeywordGroupRow[];
+  return rows.map(mapGroup);
+}
+
+export async function listKeywordGroupsForUser(userId: string): Promise<KeywordGroup[]> {
+  await initPromise;
+  const rows = (await sql`
+    SELECT
+      g.id,
+      g.name,
+      g.description,
+      g.timezone,
+      g.send_time,
+      g.days,
+      g.status,
+      g.next_delivery,
+      g.created_at,
+      COALESCE(
+        json_agg(
+          DISTINCT jsonb_build_object(
+            'id', k.id,
+            'word', k.word,
+            'priority', k.priority,
+            'volume', k.volume,
+            'created_at', to_char(k.created_at, 'YYYY-MM-DD"T"HH24:MI:SSZ')
+          )
+        ) FILTER (WHERE k.id IS NOT NULL),
+        '[]'
+      ) AS keywords,
+      g.recipients,
+      g.owner_id
+    FROM keyword_groups g
+    LEFT JOIN group_keywords gk ON gk.group_id = g.id
+    LEFT JOIN keywords k ON k.id = gk.keyword_id
+    WHERE g.owner_id = ${userId}
     GROUP BY g.id
     ORDER BY g.created_at DESC
   `) as KeywordGroupRow[];
@@ -738,13 +785,14 @@ export async function createKeywordGroup(data: {
   days: string[];
   keywords: Keyword[];
   recipients?: string[];
+  ownerId?: string;
 }) {
   await initPromise;
   const id = randomUUID();
   const nextDelivery = buildNextDeliveryLabel({ timezone: data.timezone, sendTime: data.sendTime, days: data.days });
   await sql`
-    INSERT INTO keyword_groups (id, name, description, timezone, send_time, days, status, next_delivery, recipients)
-    VALUES (${id}, ${data.name}, ${data.description}, ${data.timezone}, ${data.sendTime}, ${data.days}, 'active', ${nextDelivery}, ${data.recipients ?? []})
+    INSERT INTO keyword_groups (id, name, description, timezone, send_time, days, status, next_delivery, recipients, owner_id)
+    VALUES (${id}, ${data.name}, ${data.description}, ${data.timezone}, ${data.sendTime}, ${data.days}, 'active', ${nextDelivery}, ${data.recipients ?? []}, ${data.ownerId ?? null})
   `;
 
   await sql`
@@ -772,6 +820,7 @@ export async function createKeywordGroup(data: {
     nextDelivery,
     keywords: data.keywords,
     recipients: data.recipients ?? [],
+    ownerId: data.ownerId,
   } satisfies KeywordGroup;
 }
 

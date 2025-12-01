@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getServerSession } from "next-auth";
 
-import { createKeywordGroup, listKeywordGroups } from "@/server/store";
+import { authOptions, isAdminEmail } from "@/server/auth";
+import { createKeywordGroup, listKeywordGroups, listKeywordGroupsForUser } from "@/server/store";
 
 const keywordSchema = z.object({
   id: z.string(),
@@ -22,7 +24,16 @@ const createGroupSchema = z.object({
 });
 
 export async function GET() {
-  const groups = await listKeywordGroups();
+  const session = await getServerSession(authOptions);
+  const email = session?.user?.email ?? null;
+  const userId = (session?.user as { id?: string } | null)?.id;
+
+  if (!session || !email || !userId) {
+    return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  }
+
+  const isAdmin = isAdminEmail(email);
+  const groups = isAdmin ? await listKeywordGroups() : await listKeywordGroupsForUser(userId);
   return NextResponse.json({ data: groups });
 }
 
@@ -42,6 +53,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const group = await createKeywordGroup(parseResult.data);
+  const session = await getServerSession(authOptions);
+  const email = session?.user?.email ?? null;
+  const userId = (session?.user as { id?: string } | null)?.id;
+
+  if (!session || !email || !userId) {
+    return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  }
+
+  const group = await createKeywordGroup({ ...parseResult.data, ownerId: userId });
   return NextResponse.json({ data: group }, { status: 201 });
 }

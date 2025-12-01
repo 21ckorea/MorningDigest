@@ -21,6 +21,7 @@ export interface KeywordGroup {
   nextDelivery: string;
   keywords: Keyword[];
   recipients: string[];
+  ownerId?: string;
 }
 
 export interface DigestArticle {
