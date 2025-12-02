@@ -23,6 +23,31 @@ const RSS_SOURCES = [
     buildUrl: (keyword: string) =>
       `https://www.bing.com/news/search?q=${encodeURIComponent(keyword)}&format=rss`,
   },
+  {
+    id: "hankyung-all",
+    name: "한국경제",
+    buildUrl: () => "https://www.hankyung.com/feed",
+  },
+  {
+    id: "mk-all",
+    name: "매일경제",
+    buildUrl: () => "https://www.mk.co.kr/rss/40300001/",
+  },
+  {
+    id: "yonhap-all",
+    name: "연합뉴스",
+    buildUrl: () => "https://www.yna.co.kr/rss/all.xml",
+  },
+  {
+    id: "chosun-all",
+    name: "조선일보",
+    buildUrl: () => "https://rssplus.chosun.com/web_service/rss/rss.xml",
+  },
+  {
+    id: "sbs-news",
+    name: "SBS 뉴스",
+    buildUrl: () => "https://news.sbs.co.kr/news/rss.do?plink=RSSREADER",
+  },
 ];
 
 const MAX_ARTICLES_PER_KEYWORD = 4;
@@ -55,11 +80,17 @@ async function parseFeed(url: string) {
 }
 
 async function fetchArticlesForKeyword(keyword: string): Promise<CandidateArticle[]> {
+  const lowerKeyword = keyword.toLowerCase();
   const settlements = await Promise.allSettled(
     RSS_SOURCES.map(async (source) => {
       const feed = await parseFeed(source.buildUrl(keyword));
       const items = feed.items ?? [];
-      return items.slice(0, MAX_ARTICLES_PER_KEYWORD).map((item) => {
+      const filtered = items.filter((item) => {
+        const haystack = `${item.title ?? ""} ${item.contentSnippet ?? item.content ?? ""}`.toLowerCase();
+        return haystack.includes(lowerKeyword);
+      });
+
+      return filtered.slice(0, MAX_ARTICLES_PER_KEYWORD).map((item) => {
         const headline = item.title?.trim() ?? `${keyword} 업데이트`;
         const summary = buildSummary(item.contentSnippet ?? item.content ?? "");
         const publishedAt = item.isoDate ?? item.pubDate ?? new Date().toISOString();
