@@ -1,0 +1,50 @@
+@startuml
+' Next.js 보안 패치 브랜치를 main에 머지하고 push 하는 흐름
+
+actor Developer as Dev
+participant "Vercel (보안 패치 브랜치 생성)" as Vercel
+participant "origin (GitHub 원격)" as Origin
+participant "로컬 Git 저장소" as Local
+participant "작업 디렉토리(워킹트리)" as WS
+
+Dev -> Origin: git pull
+Origin --> Dev: 최신 main 동기화
+
+Vercel -> Origin: vercel/react-server-components-cve-vu-x2gj2g 브랜치 생성 & push
+
+Dev -> Origin: git fetch origin
+Origin --> Local: origin/vercel/react-server-components-cve-vu-x2gj2g 정보
+
+Dev -> Local: git checkout -b vercel/... origin/vercel/...
+note right of Local
+  vercel/react-server-components-cve-vu-x2gj2g
+  로컬 브랜치 생성 & 체크아웃
+end note
+
+Dev -> Local: (선택) git diff main..vercel/...
+Local -> Dev: 보안 패치 변경 내용 확인
+
+Dev -> Local: git checkout main
+note right of Local
+  main 브랜치로 이동
+end note
+
+Dev -> Local: git merge vercel/react-server-components-cve-vu-x2gj2g
+note over Local,WS
+  자동 머지 성공 → MERGE_MSG 편집 창 열림
+  충돌이 있다면 여기서 수동으로 해결
+end note
+
+Dev -> WS: 변경된 파일 확인 (git status)
+Dev -> WS: git add .
+Dev -> Local: git commit -m "보안 문제 해결"
+
+Dev -> WS: (선택) cd webapp && npm install && npm run build
+WS -> Dev: 빌드 성공 여부 확인
+
+Dev -> Origin: git push origin main
+Origin -> Vercel: main 브랜치 업데이트 알림
+Vercel -> Vercel: 새 main 기준으로 빌드/배포
+Vercel -> Dev: Next.js 취약점 경고 해소
+
+@enduml

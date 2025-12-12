@@ -219,9 +219,13 @@ export async function generateDigestsForActiveGroups(
     }
     if (group.status !== "active") return false;
     if (shouldBypassSchedule) return true;
+    // GitHub Actions 스케줄이 실제로는 수 분~수십 분씩 지연될 수 있으므로,
+    // "sendTime 이후 오늘 중에 한 번이라도" 실행되면 발송되도록 상한을 하루(24시간)로 넓힌다.
+    // 중복 발송은 digestIssueExists(groupId, today) 체크로 방지한다.
+    const ONE_DAY_MINUTES = 24 * 60;
     return isWithinSendWindow(
       { timezone: group.timezone, sendTime: group.sendTime, days: group.days },
-      SEND_WINDOW_MINUTES
+      ONE_DAY_MINUTES
     );
   });
 
