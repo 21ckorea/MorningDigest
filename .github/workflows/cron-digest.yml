@@ -3,7 +3,6 @@ name: Scheduled Digest Runner # test-2025-11-30
 on:
   schedule:
     - cron: "*/5 * * * *"      # 0,5,10,15,... (UTC 기준)
-    - cron: "2-59/5 * * * *"   # 2,7,12,17,... (UTC 기준, 보조 슬롯)
   workflow_dispatch:
 
 jobs:
