@@ -9,7 +9,7 @@ const WEEKDAY_LABELS: Record<string, string> = {
   Sat: "토",
 };
 
-export const SEND_WINDOW_MINUTES = 5;
+export const SEND_WINDOW_MINUTES = 15;
 
 export interface ScheduleConfig {
   timezone: string;
