@@ -795,6 +795,7 @@ export async function listKeywordGroups(): Promise<KeywordGroup[]> {
       g.recipients,
       g.owner_id
     FROM keyword_groups g
+    LEFT JOIN delivery_settings ds ON ds.group_id = g.id
     LEFT JOIN group_keywords gk ON gk.group_id = g.id
     LEFT JOIN keywords k ON k.id = gk.keyword_id
     GROUP BY g.id
