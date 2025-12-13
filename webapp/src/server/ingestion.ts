@@ -2,7 +2,7 @@ import Parser from "rss-parser";
 
 import type { DigestArticle, DigestIssue, KeywordGroup } from "@/types";
 import { computeNextDeliveryLabel, isWithinSendWindow, SEND_WINDOW_MINUTES } from "./schedule";
-import { createDigestIssue, listKeywordGroups, digestIssueExists } from "./store";
+import { createDigestIssue, listKeywordGroups, digestIssueExists, getDeliverySettingForGroup } from "./store";
 
 const parser = new Parser({
   customFields: {
@@ -79,7 +79,7 @@ async function parseFeed(url: string) {
   return parser.parseString(xml);
 }
 
-async function fetchArticlesForKeyword(keyword: string): Promise<CandidateArticle[]> {
+async function fetchArticlesForKeyword(keyword: string, maxSummaryLength: number): Promise<CandidateArticle[]> {
   const lowerKeyword = keyword.toLowerCase();
   const settlements = await Promise.allSettled(
     RSS_SOURCES.map(async (source) => {
@@ -92,7 +92,7 @@ async function fetchArticlesForKeyword(keyword: string): Promise<CandidateArticl
 
       return filtered.slice(0, MAX_ARTICLES_PER_KEYWORD).map((item) => {
         const headline = item.title?.trim() ?? `${keyword} 업데이트`;
-        const summary = buildSummary(item.contentSnippet ?? item.content ?? "");
+        const summary = buildSummary(item.contentSnippet ?? item.content ?? "", maxSummaryLength);
         const publishedAt = item.isoDate ?? item.pubDate ?? new Date().toISOString();
         const sourceUrl = item.link ?? source.buildUrl(keyword);
         const relevanceScore = scoreArticle(headline, summary, keyword, publishedAt);
@@ -177,8 +177,15 @@ export async function generateDigestForGroup(groupId: string) {
     throw new Error(`Keyword group ${groupId} has no keywords; skip digest generation.`);
   }
 
+  // 그룹별 발송 설정에서 요약 길이 프리셋을 읽어와서 실제 요약 길이에 반영한다.
+  // 설정이 없다면 "standard"를 기본값으로 사용한다.
+  const delivery = await getDeliverySettingForGroup(groupId);
+  const preset = delivery?.summaryLength ?? "standard";
+  const maxSummaryLength =
+    preset === "short" ? 80 : preset === "long" ? 400 : 200;
+
   const articleBatches = await Promise.all(
-    group.keywords.map((keyword) => fetchArticlesForKeyword(keyword.word))
+    group.keywords.map((keyword) => fetchArticlesForKeyword(keyword.word, maxSummaryLength))
   );
 
   const flattened = articleBatches.flat();

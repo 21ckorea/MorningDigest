@@ -95,30 +95,52 @@ export function renderDigestEmail(issue: DigestIssue): { subject: string; html: 
 
   const articlesHtml = (issue.articles ?? [])
     .map((article) => {
-      const hasDistinctSummary = Boolean(
-        article.summary && article.summary.trim() !== article.headline.trim()
-      );
+      const headline = (article.headline ?? "").trim();
+      const rawSummary = (article.summary ?? "").trim();
+      const source = article.sourceName ?? "";
+      const publishedAt = (article.publishedAt ?? "").slice(0, 10);
+
+      // 제목과 거의 같은 내용(완전 동일하거나, 제목으로 시작하고 몇 글자만 다른 경우)은
+      // 요약으로 보여주지 않는다.
+      const isVerySimilarToHeadline = (() => {
+        if (!rawSummary || !headline) return false;
+        if (rawSummary === headline) return true;
+        if (rawSummary.startsWith(headline)) {
+          const extra = rawSummary.slice(headline.length).trim();
+          if (extra.length <= 8) return true;
+        }
+        return false;
+      })();
+
+      const hasDistinctSummary = Boolean(rawSummary && !isVerySimilarToHeadline);
       const summaryHtml = hasDistinctSummary
-        ? `<p style="margin:0 0 4px;font-size:14px;color:#475569">${article.summary}</p>`
+        ? `<p style="margin:0 0 6px;font-size:14px;line-height:1.5;color:#475569">${rawSummary}</p>`
         : "";
+
+      const metaLine = [source, publishedAt].filter(Boolean).join(" · ");
+
       return `
-        <article style="margin-bottom:16px">
-          <h3 style="margin:0 0 4px;font-size:16px">${article.headline}</h3>
+        <article style="margin-bottom:12px;border-radius:12px;border:1px solid #e2e8f0;padding:12px 14px;background:#ffffff">
+          <p style="margin:0 0 6px;font-size:12px;color:#64748b">${metaLine}</p>
+          <h3 style="margin:0 0 6px;font-size:16px;line-height:1.5;color:#0f172a">${headline}</h3>
           ${summaryHtml}
-          <a href="${article.sourceUrl}" style="font-size:14px;color:#2563eb">${article.sourceName}</a>
+          <a href="${article.sourceUrl}" style="display:inline-block;margin-top:2px;font-size:13px;font-weight:500;color:#2563eb;text-decoration:none">원문 보기 →</a>
         </article>
       `;
     })
     .join("");
 
   const html = `
-    <main style="font-family:Inter,system-ui,sans-serif;padding:24px;background:#f8fafc">
-      <section style="max-width:600px;margin:auto;background:#ffffff;border-radius:16px;padding:24px">
-        <h1 style="font-size:22px;margin-bottom:16px">${issue.groupName} · ${issue.date}</h1>
-        <p style="margin:0 0 12px;color:#475569">오늘의 핵심 이슈</p>
-        <ul style="padding-left:20px;color:#1e293b">${bulletList}</ul>
-        <hr style="margin:24px 0;border:none;border-top:1px solid #e2e8f0" />
-        <div>${articlesHtml}</div>
+    <main style="font-family:Inter,system-ui,sans-serif;padding:24px;background:#f1f5f9">
+      <section style="max-width:640px;margin:auto;background:#ffffff;border-radius:18px;padding:24px 24px 20px;border:1px solid #e2e8f0">
+        <header style="margin-bottom:18px">
+          <h1 style="font-size:22px;margin:0 0 4px;color:#0f172a">${issue.groupName} · ${issue.date}</h1>
+          <p style="margin:0 0 10px;color:#64748b;font-size:14px">오늘의 핵심 이슈</p>
+          <ul style="margin:0;padding-left:20px;color:#1e293b;font-size:14px;line-height:1.5">${bulletList}</ul>
+        </header>
+        <div style="margin-top:16px;border-top:1px solid #e2e8f0;padding-top:12px">
+          ${articlesHtml}
+        </div>
       </section>
     </main>
   `;
@@ -129,11 +151,22 @@ export function renderDigestEmail(issue: DigestIssue): { subject: string; html: 
 
   const textArticles = (issue.articles ?? [])
     .map((article, idx) => {
-      const hasDistinctSummary = Boolean(
-        article.summary && article.summary.trim() !== article.headline.trim()
-      );
-      const summaryText = hasDistinctSummary ? `\n${article.summary}` : "";
-      return `${idx + 1}. ${article.headline} (${article.sourceName})${summaryText}`;
+      const headline = (article.headline ?? "").trim();
+      const rawSummary = (article.summary ?? "").trim();
+
+      const isVerySimilarToHeadline = (() => {
+        if (!rawSummary || !headline) return false;
+        if (rawSummary === headline) return true;
+        if (rawSummary.startsWith(headline)) {
+          const extra = rawSummary.slice(headline.length).trim();
+          if (extra.length <= 8) return true;
+        }
+        return false;
+      })();
+
+      const hasDistinctSummary = Boolean(rawSummary && !isVerySimilarToHeadline);
+      const summaryText = hasDistinctSummary ? `\n${rawSummary}` : "";
+      return `${idx + 1}. ${headline} (${article.sourceName})${summaryText}`;
     })
     .join("\n\n");
 
