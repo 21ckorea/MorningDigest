@@ -16,6 +16,7 @@ const updateGroupSchema = z.object({
   keywords: z.array(z.string().min(1)).min(1),
   status: z.enum(["active", "paused"]),
   recipients: z.array(z.string().email()).min(1),
+  summaryLength: z.enum(["short", "standard", "long"]).default("standard"),
 });
 
 export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> | { id: string } }) {
@@ -78,6 +79,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       status: data.status,
       keywordIds: keywordList.map((kw) => kw.id),
       recipients: data.recipients,
+      summaryLength: data.summaryLength,
     });
     return NextResponse.json({ data: group });
   } catch (error) {

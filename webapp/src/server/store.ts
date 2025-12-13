@@ -361,6 +361,7 @@ async function fetchKeywordGroupRow(id: string): Promise<KeywordGroupRow | null>
       g.status,
       g.next_delivery,
       g.created_at,
+      ds.summary_length,
       g.recipients,
       g.owner_id,
       COALESCE(
@@ -376,6 +377,7 @@ async function fetchKeywordGroupRow(id: string): Promise<KeywordGroupRow | null>
         '[]'
       ) AS keywords
     FROM keyword_groups g
+    LEFT JOIN delivery_settings ds ON ds.group_id = g.id
     LEFT JOIN group_keywords gk ON gk.group_id = g.id
     LEFT JOIN keywords k ON k.id = gk.keyword_id
     WHERE g.id = ${id}
@@ -674,6 +676,7 @@ function mapGroup(row: KeywordGroupRow): KeywordGroup {
     keywords: (row.keywords as KeywordRow[] | null)?.map(mapKeyword) ?? [],
     recipients: row.recipients ?? [],
     ownerId: row.owner_id ?? undefined,
+    summaryLength: (row as any).summary_length ?? undefined,
   };
 }
 
@@ -776,6 +779,7 @@ export async function listKeywordGroups(): Promise<KeywordGroup[]> {
       g.status,
       g.next_delivery,
       g.created_at,
+      ds.summary_length,
       COALESCE(
         json_agg(
           DISTINCT jsonb_build_object(
@@ -867,7 +871,7 @@ export async function createKeywordGroup(data: {
 
   await sql`
     INSERT INTO delivery_settings (group_id, summary_length, template, channels)
-    VALUES (${id}, 'standard', 'insight', ${["email"]})
+    VALUES (${id}, ${data.summaryLength ?? "standard"}, 'insight', ${["email"]})
     ON CONFLICT (group_id) DO NOTHING
   `;
 
@@ -904,6 +908,7 @@ export async function updateKeywordGroup(data: {
   status: "active" | "paused";
   keywordIds: string[];
   recipients?: string[];
+  summaryLength?: "short" | "standard" | "long";
 }) {
   await initPromise;
   await sql`
@@ -918,6 +923,14 @@ export async function updateKeywordGroup(data: {
         next_delivery = ${buildNextDeliveryLabel({ timezone: data.timezone, sendTime: data.sendTime, days: data.days })}
     WHERE id = ${data.id}
   `;
+
+  if (data.summaryLength) {
+    await sql`
+      INSERT INTO delivery_settings (group_id, summary_length, template, channels)
+      VALUES (${data.id}, ${data.summaryLength}, 'insight', ${["email"]})
+      ON CONFLICT (group_id) DO UPDATE SET summary_length = EXCLUDED.summary_length
+    `;
+  }
 
   // 그룹 설정이 바뀐 경우, 오늘 이미 생성된 digest 이슈는 제거하여
   // 새 설정으로 다시 발송될 수 있도록 처리합니다.

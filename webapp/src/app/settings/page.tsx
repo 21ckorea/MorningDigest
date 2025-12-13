@@ -1,12 +1,12 @@
-import { Bell, Globe2, Mail, Smartphone } from "lucide-react";
+import { Bell, Mail, Smartphone } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
-import { authOptions, isAdminEmail } from "@/server/auth";
-import { getNotificationSetting, listDeliverySettings, listDeliverySettingsForUser } from "@/server/store";
+import { authOptions } from "@/server/auth";
+import { getNotificationSetting } from "@/server/store";
 
-import { updateDeliverySettingAction, updateNotificationSettingAction } from "./actions";
+import { updateNotificationSettingAction } from "./actions";
 
 const summaryOptions = [
   { value: "short", label: "짧게" },
@@ -35,118 +35,14 @@ export default async function SettingsPage() {
     redirect("/login");
   }
 
-  const isAdmin = isAdminEmail(email);
-
-  const [settings, notificationSetting] = await Promise.all([
-    isAdmin ? listDeliverySettings() : listDeliverySettingsForUser(userId),
-    getNotificationSetting(),
-  ]);
+  const notificationSetting = await getNotificationSetting();
 
   return (
     <AppShell
       title="발송 & 알림 설정"
       description="무료 티어 한도 내에서 타임존 · 템플릿 · 채널을 조정하세요."
     >
-      <div className="grid gap-6 lg:grid-cols-3">
-        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">그룹별 발송 설정</h2>
-              <p className="text-sm text-slate-500">
-                {isAdmin
-                  ? "관리자 계정입니다. 전체 그룹의 발송 요약/템플릿을 조정할 수 있습니다."
-                  : "내가 소유한 그룹의 발송 요약/템플릿을 조정할 수 있습니다."}
-              </p>
-            </div>
-          </div>
-          {settings.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-500">
-              아직 등록된 키워드 그룹이 없습니다. 그룹을 생성하면 발송 설정을 여기서 바로 관리할 수 있습니다.
-            </p>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {settings.map((setting) => {
-                const channels = setting.channels ?? ["email"];
-                return (
-                  <article key={setting.id} className="grid gap-4 py-4 first:pt-0 last:pb-0 lg:grid-cols-3">
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-slate-500">그룹</p>
-                      <h3 className="text-lg font-semibold text-slate-900">{setting.groupName}</h3>
-                      <p className="text-sm text-slate-500">
-                        요약 길이 · 템플릿: {setting.summaryLength} · {setting.template}
-                      </p>
-                    </div>
-                    <div className="text-sm text-slate-600">
-                      <p className="flex items-center gap-2">
-                        <Globe2 className="h-4 w-4 text-slate-400" />
-                        {setting.timezone}
-                      </p>
-                      <p className="mt-2 flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-slate-400" />
-                        {setting.sendTime} ({setting.days.join(", ")})
-                      </p>
-                    </div>
-                    <form action={updateDeliverySettingAction} className="space-y-3 rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm text-slate-700">
-                      <input type="hidden" name="groupId" value={setting.id} />
-                      <div>
-                        <label className="text-xs uppercase tracking-wide text-slate-500">요약 길이</label>
-                        <select
-                          name="summaryLength"
-                          defaultValue={setting.summaryLength}
-                          className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
-                        >
-                          {summaryOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs uppercase tracking-wide text-slate-500">템플릿</label>
-                        <select
-                          name="template"
-                          defaultValue={setting.template}
-                          className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
-                        >
-                          {templateOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <p className="text-xs uppercase tracking-wide text-slate-500">채널</p>
-                        <div className="mt-1 flex flex-wrap gap-2">
-                          {channelOptions.map((channel) => (
-                            <label key={channel.value} className="flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                              <input
-                                type="checkbox"
-                                name="channels"
-                                value={channel.value}
-                                defaultChecked={channels.includes(channel.value)}
-                                className="h-3 w-3 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                              />
-                              {channel.label}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                      <button
-                        type="submit"
-                        className="w-full rounded-full bg-indigo-600 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
-                      >
-                        변경 저장
-                      </button>
-                    </form>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
+      <div className="grid gap-6 lg:grid-cols-2">
         <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">알림 & 한도</h2>
@@ -183,14 +79,6 @@ export default async function SettingsPage() {
               알림 설정 저장
             </button>
           </form>
-          <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-600">
-            <p className="font-semibold text-slate-900">무료 플랜 한도</p>
-            <ul className="mt-2 list-disc space-y-1 pl-5">
-              <li>이메일 발송 3,000건/월 (Resend Free)</li>
-              <li>Upstash Queue 10k 요청/일</li>
-              <li>Supabase DB 500MB 저장</li>
-            </ul>
-          </div>
         </section>
       </div>
     </AppShell>

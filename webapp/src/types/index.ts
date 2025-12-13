@@ -22,6 +22,7 @@ export interface KeywordGroup {
   keywords: Keyword[];
   recipients: string[];
   ownerId?: string;
+  summaryLength?: "short" | "standard" | "long";
 }
 
 export interface DigestArticle {

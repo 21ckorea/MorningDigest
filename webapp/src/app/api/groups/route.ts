@@ -14,6 +14,7 @@ const createGroupSchema = z.object({
   // 쉼표로 구분해 입력된 키워드를 파싱한 문자열 배열
   keywords: z.array(z.string().min(1)).min(1),
   recipients: z.array(z.string().email()).min(1),
+  summaryLength: z.enum(["short", "standard", "long"]).default("standard"),
 });
 
 export async function GET() {
@@ -64,6 +65,7 @@ export async function POST(request: Request) {
     days: parseResult.data.days,
     keywords: keywordList,
     recipients: parseResult.data.recipients,
+    summaryLength: parseResult.data.summaryLength,
     ownerId: userId,
   });
   return NextResponse.json({ data: group }, { status: 201 });

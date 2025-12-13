@@ -250,7 +250,15 @@ export async function generateDigestForGroup(groupId: string) {
 
   const flattened = articleBatches.flat();
   if (flattened.length === 0) {
-    throw new Error(`No articles found for group ${groupId}`);
+    const highlights = ["오늘은 해당 키워드로 수집된 기사가 없습니다."];
+
+    return createDigestIssue({
+      groupId: group.id,
+      groupName: group.name,
+      subject: buildSubject(group),
+      highlights,
+      articles: [],
+    });
   }
 
   const topArticles = pickTopArticles(flattened);

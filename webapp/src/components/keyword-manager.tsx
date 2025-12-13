@@ -35,6 +35,7 @@ type GroupFormState = {
   // 쉼표로 구분된 키워드 입력값 (예: "한국 증시, AI, 반도체")
   keywordText: string;
   recipients: string[];
+  summaryLength: "short" | "standard" | "long";
 };
 
 type ToastType = "success" | "error";
@@ -78,6 +79,7 @@ export function KeywordManager({
     days: ["Mon", "Tue", "Wed", "Thu", "Fri"],
     keywordText: "",
     recipients: [] as string[],
+    summaryLength: "standard",
   });
   const [groupForm, setGroupForm] = useState<GroupFormState>(createEmptyGroupForm);
   const [groupError, setGroupError] = useState<string | null>(null);
@@ -334,6 +336,7 @@ export function KeywordManager({
           days: groupForm.days,
           keywords: keywordWords,
           recipients,
+          summaryLength: groupForm.summaryLength,
         }),
       });
 
@@ -374,6 +377,7 @@ export function KeywordManager({
       days: group.days,
       keywordText: group.keywords.map((kw) => kw.word).join(", "),
       recipients: group.recipients,
+      summaryLength: group.summaryLength ?? "standard",
     });
     setRecipientEditInput(group.recipients.join(", "));
     setGroupEditError(null);
@@ -417,6 +421,7 @@ export function KeywordManager({
           keywords: keywordWords,
           status: targetGroup.status,
           recipients: parseRecipients(recipientEditInput),
+          summaryLength: groupForm.summaryLength,
         }),
       });
 
@@ -463,6 +468,23 @@ export function KeywordManager({
               자세한 전체 그룹 구성은 상단 메뉴의 관리 영역(/admin/groups)에서 확인할 수 있습니다.
             </p>
           ) : null}
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium" htmlFor="group-summary-length">
+            요약 길이
+          </label>
+          <select
+            id="group-summary-length"
+            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+            value={groupForm.summaryLength}
+            onChange={(event) =>
+              setGroupForm({ ...groupForm, summaryLength: event.target.value as GroupFormState["summaryLength"] })
+            }
+          >
+            <option value="short">짧게</option>
+            <option value="standard">표준</option>
+            <option value="long">길게</option>
+          </select>
         </div>
         <div className="flex gap-2">
           <button
