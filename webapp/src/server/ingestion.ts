@@ -247,7 +247,18 @@ export async function generateDigestForGroup(groupId: string) {
   }
 
   const topArticles = pickTopArticles(flattened);
+
   const highlights = buildHighlights(topArticles);
+
+  // 이번 다이제스트에서 어떤 언론사에서만 기사가 나왔는지/안 나왔는지 알려주기 위해
+  // 사용하는 소스 목록을 계산한다. (이 정보는 메일 하단에 간단한 문장으로 표시된다.)
+  const usedSources = new Set(topArticles.map((article) => article.sourceName));
+  const allSourceNames = RSS_SOURCES.map((source) => source.name);
+  const missingSources = allSourceNames.filter((name) => !usedSources.has(name));
+
+  if (missingSources.length > 0) {
+    highlights.push(`이번 키워드 기준으로 기사 없음: ${missingSources.join(", ")}`);
+  }
 
   return createDigestIssue({
     groupId: group.id,
