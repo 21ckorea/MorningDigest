@@ -361,7 +361,7 @@ async function fetchKeywordGroupRow(id: string): Promise<KeywordGroupRow | null>
       g.status,
       g.next_delivery,
       g.created_at,
-      ds.summary_length,
+      MIN(ds.summary_length) AS summary_length,
       g.recipients,
       g.owner_id,
       COALESCE(
@@ -779,7 +779,7 @@ export async function listKeywordGroups(): Promise<KeywordGroup[]> {
       g.status,
       g.next_delivery,
       g.created_at,
-      ds.summary_length,
+      MIN(ds.summary_length) AS summary_length,
       COALESCE(
         json_agg(
           DISTINCT jsonb_build_object(
