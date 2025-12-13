@@ -3,15 +3,7 @@ import { z } from "zod";
 import { getServerSession } from "next-auth";
 
 import { authOptions, isAdminEmail } from "@/server/auth";
-import { createKeywordGroup, listKeywordGroups, listKeywordGroupsForUser } from "@/server/store";
-
-const keywordSchema = z.object({
-  id: z.string(),
-  word: z.string(),
-  priority: z.enum(["high", "medium", "low"]),
-  createdAt: z.string(),
-  volume: z.string(),
-});
+import { createKeywordGroup, ensureKeywordsForWords, listKeywordGroups, listKeywordGroupsForUser } from "@/server/store";
 
 const createGroupSchema = z.object({
   name: z.string().min(1).max(80),
@@ -19,7 +11,8 @@ const createGroupSchema = z.object({
   timezone: z.string().min(1),
   sendTime: z.string().min(1),
   days: z.array(z.string()).min(1),
-  keywords: z.array(keywordSchema).min(1),
+  // 쉼표로 구분해 입력된 키워드를 파싱한 문자열 배열
+  keywords: z.array(z.string().min(1)).min(1),
   recipients: z.array(z.string().email()).min(1),
 });
 
@@ -61,6 +54,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   }
 
-  const group = await createKeywordGroup({ ...parseResult.data, ownerId: userId });
+  const keywordList = await ensureKeywordsForWords(parseResult.data.keywords);
+
+  const group = await createKeywordGroup({
+    name: parseResult.data.name,
+    description: parseResult.data.description,
+    timezone: parseResult.data.timezone,
+    sendTime: parseResult.data.sendTime,
+    days: parseResult.data.days,
+    keywords: keywordList,
+    recipients: parseResult.data.recipients,
+    ownerId: userId,
+  });
   return NextResponse.json({ data: group }, { status: 201 });
 }

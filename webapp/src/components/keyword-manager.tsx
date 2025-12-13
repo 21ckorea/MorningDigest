@@ -32,7 +32,8 @@ type GroupFormState = {
   timezone: string;
   sendTime: string;
   days: string[];
-  keywordIds: string[];
+  // 쉼표로 구분된 키워드 입력값 (예: "한국 증시, AI, 반도체")
+  keywordText: string;
   recipients: string[];
 };
 
@@ -75,7 +76,7 @@ export function KeywordManager({
     timezone: "Asia/Seoul",
     sendTime: "07:00",
     days: ["Mon", "Tue", "Wed", "Thu", "Fri"],
-    keywordIds: [] as string[],
+    keywordText: "",
     recipients: [] as string[],
   });
   const [groupForm, setGroupForm] = useState<GroupFormState>(createEmptyGroupForm);
@@ -96,6 +97,13 @@ export function KeywordManager({
       .split(",")
       .map((email) => email.trim())
       .filter((email) => email.length > 0);
+  }
+
+  function parseKeywords(value: string): string[] {
+    return value
+      .split(",")
+      .map((word) => word.trim())
+      .filter((word) => word.length > 0);
   }
 
   const activeGroupCount = useMemo(
@@ -283,18 +291,6 @@ export function KeywordManager({
     });
   }
 
-  function toggleGroupKeyword(id: string) {
-    setGroupForm((prev) => {
-      const exists = prev.keywordIds.includes(id);
-      return {
-        ...prev,
-        keywordIds: exists
-          ? prev.keywordIds.filter((kwId) => kwId !== id)
-          : [...prev.keywordIds, id],
-      };
-    });
-  }
-
   async function handleGroupSubmit() {
     if (!groupForm.name.trim()) {
       setGroupError("그룹명을 입력하세요.");
@@ -304,14 +300,11 @@ export function KeywordManager({
       setGroupError("그룹 설명을 입력하세요.");
       return;
     }
-    if (groupForm.keywordIds.length === 0) {
-      setGroupError("최소 1개의 키워드를 선택하세요.");
+    const keywordWords = parseKeywords(groupForm.keywordText);
+    if (keywordWords.length === 0) {
+      setGroupError("최소 1개의 키워드를 입력하세요.");
       return;
     }
-
-    const selectedKeywords = keywordList.filter((kw) =>
-      groupForm.keywordIds.includes(kw.id)
-    );
 
     const recipients = parseRecipients(recipientInput);
     if (recipients.length === 0) {
@@ -334,7 +327,7 @@ export function KeywordManager({
           timezone: groupForm.timezone,
           sendTime: groupForm.sendTime,
           days: groupForm.days,
-          keywords: selectedKeywords,
+          keywords: keywordWords,
           recipients,
         }),
       });
@@ -374,7 +367,7 @@ export function KeywordManager({
       timezone: group.timezone,
       sendTime: group.sendTime,
       days: group.days,
-      keywordIds: group.keywords.map((kw) => kw.id),
+      keywordText: group.keywords.map((kw) => kw.word).join(", "),
       recipients: group.recipients,
     });
     setRecipientEditInput(group.recipients.join(", "));
@@ -392,8 +385,9 @@ export function KeywordManager({
       setGroupEditError("그룹 설명을 입력하세요.");
       return;
     }
-    if (groupForm.keywordIds.length === 0) {
-      setGroupEditError("최소 1개의 키워드를 선택하세요.");
+    const keywordWords = parseKeywords(groupForm.keywordText);
+    if (keywordWords.length === 0) {
+      setGroupEditError("최소 1개의 키워드를 입력하세요.");
       return;
     }
 
@@ -415,7 +409,7 @@ export function KeywordManager({
           timezone: groupForm.timezone,
           sendTime: groupForm.sendTime,
           days: groupForm.days,
-          keywordIds: groupForm.keywordIds,
+          keywords: keywordWords,
           status: targetGroup.status,
           recipients: parseRecipients(recipientEditInput),
         }),
@@ -595,11 +589,11 @@ export function KeywordManager({
         }}
         groupForm={groupForm}
         setGroupForm={setGroupForm}
-        keywordList={keywordList}
         onSubmit={handleGroupSubmit}
         error={groupError}
         onToggleDay={toggleGroupDay}
-        onToggleKeyword={toggleGroupKeyword}
+        keywordText={groupForm.keywordText}
+        onKeywordTextChange={(value) => setGroupForm((prev) => ({ ...prev, keywordText: value }))}
         recipientsValue={recipientInput}
         onRecipientsChange={setRecipientInput}
         loading={isGroupSubmitting}
@@ -615,11 +609,11 @@ export function KeywordManager({
         }}
         groupForm={groupForm}
         setGroupForm={setGroupForm}
-        keywordList={keywordList}
         onSubmit={handleGroupUpdate}
         error={groupEditError}
         onToggleDay={toggleGroupDay}
-        onToggleKeyword={toggleGroupKeyword}
+        keywordText={groupForm.keywordText}
+        onKeywordTextChange={(value) => setGroupForm((prev) => ({ ...prev, keywordText: value }))}
         recipientsValue={recipientEditInput}
         onRecipientsChange={setRecipientEditInput}
         loading={isGroupUpdating}
@@ -826,11 +820,11 @@ interface AddGroupModalProps {
   onClose: () => void;
   groupForm: GroupFormState;
   setGroupForm: Dispatch<SetStateAction<GroupFormState>>;
-  keywordList: Keyword[];
   onSubmit: () => void;
   error: string | null;
   onToggleDay: (day: string) => void;
-  onToggleKeyword: (id: string) => void;
+  keywordText: string;
+  onKeywordTextChange: (value: string) => void;
   recipientsValue: string;
   onRecipientsChange: (value: string) => void;
   loading?: boolean;
@@ -844,11 +838,11 @@ function AddGroupModal({
   onClose,
   groupForm,
   setGroupForm,
-  keywordList,
   onSubmit,
   error,
   onToggleDay,
-  onToggleKeyword,
+  keywordText,
+  onKeywordTextChange,
   recipientsValue,
   onRecipientsChange,
   loading = false,
@@ -940,27 +934,17 @@ function AddGroupModal({
         </div>
       </div>
       <div className="space-y-2">
-        <label className="text-sm font-medium">포함할 키워드</label>
-        <div className="flex flex-wrap gap-2">
-          {keywordList.map((keyword) => (
-            <button
-              type="button"
-              key={keyword.id}
-              className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold ${
-                groupForm.keywordIds.includes(keyword.id)
-                  ? "border-slate-900 bg-slate-900 text-white"
-                  : "border-slate-200 text-slate-600"
-              }`}
-              onClick={() => onToggleKeyword(keyword.id)}
-            >
-              {groupForm.keywordIds.includes(keyword.id) ? <X className="h-3 w-3" /> : null}
-              {keyword.word}
-            </button>
-          ))}
-          {keywordList.length === 0 ? (
-            <span className="text-xs text-slate-500">먼저 키워드를 등록하세요.</span>
-          ) : null}
-        </div>
+        <label className="text-sm font-medium" htmlFor="group-keywords">
+          포함할 키워드 (쉼표로 구분)
+        </label>
+        <textarea
+          id="group-keywords"
+          rows={2}
+          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+          value={keywordText}
+          onChange={(event) => onKeywordTextChange(event.target.value)}
+          placeholder="예: 한국 증시, AI, 반도체"
+        />
       </div>
       <div className="space-y-2">
         <label className="text-sm font-medium" htmlFor="group-recipients">

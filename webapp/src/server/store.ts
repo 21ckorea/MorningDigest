@@ -687,6 +687,35 @@ export async function listKeywords(): Promise<Keyword[]> {
   return rows.map(mapKeyword);
 }
 
+export async function getKeywordsByWords(words: string[]): Promise<Keyword[]> {
+  const unique = Array.from(new Set(words.map((word) => word.trim()).filter(Boolean)));
+  if (unique.length === 0) return [];
+  await initPromise;
+  const rows = (await sql`
+    SELECT id, word, priority, volume, to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SSZ') as created_at
+    FROM keywords
+    WHERE word = ANY(${unique})
+  `) as KeywordRow[];
+  return rows.map(mapKeyword);
+}
+
+export async function ensureKeywordsForWords(words: string[]): Promise<Keyword[]> {
+  const unique = Array.from(new Set(words.map((word) => word.trim()).filter(Boolean)));
+  if (unique.length === 0) return [];
+
+  const existing = await getKeywordsByWords(unique);
+  const existingWords = new Set(existing.map((kw) => kw.word));
+  const missing = unique.filter((word) => !existingWords.has(word));
+
+  const created: Keyword[] = [];
+  for (const word of missing) {
+    const keyword = await createKeyword({ word, priority: "medium" });
+    created.push(keyword);
+  }
+
+  return [...existing, ...created];
+}
+
 export async function createKeyword(data: { word: string; priority: Keyword["priority"] }) {
   await initPromise;
   const id = randomUUID();
