@@ -119,11 +119,18 @@ async function tryFetchArticleBody(url: string): Promise<string | null> {
 
 async function fetchArticlesForKeyword(keyword: string, maxSummaryLength: number): Promise<CandidateArticle[]> {
   const lowerKeyword = keyword.toLowerCase();
+  const todaySeoul = formatSeoulDate(new Date());
   const settlements = await Promise.allSettled(
     RSS_SOURCES.map(async (source) => {
       const feed = await parseFeed(source.buildUrl(keyword));
       const items = feed.items ?? [];
       const filtered = items.filter((item) => {
+        const publishedRaw = (item as any).isoDate ?? item.pubDate ?? null;
+        const publishedAt = publishedRaw ? new Date(publishedRaw) : null;
+        const publishedDateSeoul = publishedAt ? formatSeoulDate(publishedAt) : null;
+        if (publishedDateSeoul && publishedDateSeoul !== todaySeoul) {
+          return false;
+        }
         const haystack = `${item.title ?? ""} ${item.contentSnippet ?? item.content ?? ""}`.toLowerCase();
         return haystack.includes(lowerKeyword);
       });
