@@ -94,13 +94,21 @@ export function renderDigestEmail(issue: DigestIssue): { subject: string; html: 
     : "<li>요약 정보가 준비중입니다.</li>";
 
   const articlesHtml = (issue.articles ?? [])
-    .map((article) => `
+    .map((article) => {
+      const hasDistinctSummary = Boolean(
+        article.summary && article.summary.trim() !== article.headline.trim()
+      );
+      const summaryHtml = hasDistinctSummary
+        ? `<p style="margin:0 0 4px;font-size:14px;color:#475569">${article.summary}</p>`
+        : "";
+      return `
         <article style="margin-bottom:16px">
           <h3 style="margin:0 0 4px;font-size:16px">${article.headline}</h3>
-          <p style="margin:0 0 4px;font-size:14px;color:#475569">${article.summary}</p>
+          ${summaryHtml}
           <a href="${article.sourceUrl}" style="font-size:14px;color:#2563eb">${article.sourceName}</a>
         </article>
-      `)
+      `;
+    })
     .join("");
 
   const html = `
@@ -120,7 +128,13 @@ export function renderDigestEmail(issue: DigestIssue): { subject: string; html: 
     : "요약 정보가 준비중입니다.";
 
   const textArticles = (issue.articles ?? [])
-    .map((article, idx) => `${idx + 1}. ${article.headline} (${article.sourceName})\n${article.summary}`)
+    .map((article, idx) => {
+      const hasDistinctSummary = Boolean(
+        article.summary && article.summary.trim() !== article.headline.trim()
+      );
+      const summaryText = hasDistinctSummary ? `\n${article.summary}` : "";
+      return `${idx + 1}. ${article.headline} (${article.sourceName})${summaryText}`;
+    })
     .join("\n\n");
 
   const text = `${issue.groupName} · ${issue.date}\n${textHighlights}\n\n${textArticles}`;
