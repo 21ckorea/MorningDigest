@@ -53,6 +53,16 @@ const RSS_SOURCES = [
 const MAX_ARTICLES_PER_KEYWORD = 4;
 const MAX_ARTICLES_PER_DIGEST = 8;
 
+// HTML 본문을 추가로 스크랩하여 요약을 보강할 대상 도메인 화이트리스트
+const HTML_SCRAPE_HOSTS = new Set<string>([
+  "www.hankyung.com",
+  "www.mk.co.kr",
+  "www.yna.co.kr",
+  "rssplus.chosun.com",
+  "news.sbs.co.kr",
+  "choice.co.kr",
+]);
+
 type CandidateArticle = {
   headline: string;
   summary: string;
@@ -79,6 +89,34 @@ async function parseFeed(url: string) {
   return parser.parseString(xml);
 }
 
+async function tryFetchArticleBody(url: string): Promise<string | null> {
+  try {
+    const parsed = new URL(url);
+    if (!HTML_SCRAPE_HOSTS.has(parsed.host)) return null;
+
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "MorningDigestBot/0.1 (+https://example.com)",
+        Accept: "text/html,application/xhtml+xml",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) return null;
+    const html = await response.text();
+
+    // 매우 단순한 본문 추출: script/style 제거 후 태그를 모두 없애고 텍스트만 사용
+    const withoutScripts = html.replace(/<script[\s\S]*?<\/script>/gi, " ");
+    const withoutStyles = withoutScripts.replace(/<style[\s\S]*?<\/style>/gi, " ");
+    const textOnly = withoutStyles.replace(/<[^>]+>/g, " ");
+    const clean = textOnly.replace(/\s+/g, " ").trim();
+
+    return clean || null;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchArticlesForKeyword(keyword: string, maxSummaryLength: number): Promise<CandidateArticle[]> {
   const lowerKeyword = keyword.toLowerCase();
   const settlements = await Promise.allSettled(
@@ -90,21 +128,36 @@ async function fetchArticlesForKeyword(keyword: string, maxSummaryLength: number
         return haystack.includes(lowerKeyword);
       });
 
-      return filtered.slice(0, MAX_ARTICLES_PER_KEYWORD).map((item) => {
-        const headline = item.title?.trim() ?? `${keyword} 업데이트`;
-        const summary = buildSummary(item.contentSnippet ?? item.content ?? "", maxSummaryLength);
-        const publishedAt = item.isoDate ?? item.pubDate ?? new Date().toISOString();
-        const sourceUrl = item.link ?? source.buildUrl(keyword);
-        const relevanceScore = scoreArticle(headline, summary, keyword, publishedAt);
-        return {
-          headline,
-          summary,
-          sourceName: source.name,
-          sourceUrl,
-          publishedAt,
-          relevanceScore,
-        } satisfies CandidateArticle;
-      });
+      return Promise.all(
+        filtered.slice(0, MAX_ARTICLES_PER_KEYWORD).map(async (item) => {
+          const headline = item.title?.trim() ?? `${keyword} 업데이트`;
+          const sourceUrl = item.link ?? source.buildUrl(keyword);
+
+          const baseSource = item.contentSnippet ?? item.content ?? "";
+          let summarySource = baseSource;
+
+          // 요약 길이가 길게 설정된 경우에는, 화이트리스트 도메인에 한해
+          // HTML 본문을 추가로 스크랩하여 요약을 보강한다.
+          if (maxSummaryLength >= 200 && sourceUrl) {
+            const body = await tryFetchArticleBody(sourceUrl);
+            if (body) {
+              summarySource = body;
+            }
+          }
+
+          const summary = buildSummary(summarySource, maxSummaryLength);
+          const publishedAt = item.isoDate ?? item.pubDate ?? new Date().toISOString();
+          const relevanceScore = scoreArticle(headline, summary, keyword, publishedAt);
+          return {
+            headline,
+            summary,
+            sourceName: source.name,
+            sourceUrl,
+            publishedAt,
+            relevanceScore,
+          } satisfies CandidateArticle;
+        })
+      );
     })
   );
 
