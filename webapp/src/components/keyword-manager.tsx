@@ -111,6 +111,11 @@ export function KeywordManager({
     [groupList]
   );
 
+  const uniqueKeywordCount = useMemo(() => {
+    const words = keywordList.map((kw) => kw.word);
+    return new Set(words).size;
+  }, [keywordList]);
+
   function pushToast(type: ToastType, message: string) {
     const id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2, 9);
     setToasts((prev) => [...prev, { id, type, message }]);
@@ -447,11 +452,11 @@ export function KeywordManager({
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">키워드 & 그룹 관리</h2>
+          <h2 className="text-lg font-semibold text-slate-900">그룹 관리</h2>
           <p className="text-sm text-slate-500">
             {isAdmin
               ? "관리자 계정입니다. 전체 사용자의 그룹 구성을 확인할 수 있습니다."
-              : "내 계정의 키워드와 그룹 발송 조건을 관리할 수 있습니다."}
+              : "내 계정의 그룹 발송 조건을 관리할 수 있습니다."}
           </p>
           {isAdmin ? (
             <p className="mt-1 text-xs text-slate-400">
@@ -466,20 +471,18 @@ export function KeywordManager({
           >
             <Plus className="h-4 w-4" /> 그룹 생성
           </button>
-          <button
-            className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm"
-            onClick={() => setIsKeywordModalOpen(true)}
-          >
-            <Plus className="h-4 w-4" /> 키워드 추가
-          </button>
         </div>
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard label="등록 키워드" value={`${keywordList.length}개`} helper="무료 플랜 최대 50개" />
-        <MetricCard label="활성 그룹" value={`${activeGroupCount}개`} helper="타임존 자동 적용" />
-        <MetricCard label="일 평균 요약" value="18건" helper="무료 요약 API 사용 중" />
-        <MetricCard label="평균 발송 시간" value="07:12 KST" helper="Vercel Cron 기반" />
+        <MetricCard
+          label="등록 키워드 (전체)"
+          value={`${uniqueKeywordCount}개`}
+          helper="모든 사용자 기준 중복 제거"
+        />
+        <MetricCard label="활성 그룹" value={`${activeGroupCount}개`} helper="" />
+        <MetricCard label="일 평균 요약" value="18건" helper="" />
+        <MetricCard label="평균 발송 시간" value="07:12 KST" helper="" />
       </section>
 
       <section className="space-y-4">
@@ -508,77 +511,7 @@ export function KeywordManager({
         </div>
       </section>
 
-      <section className="space-y-4">
-        <div className="flex items-center gap-2 text-slate-600">
-          <Tag className="h-4 w-4" />
-          <h3 className="text-lg font-semibold text-slate-900">전체 키워드 목록</h3>
-        </div>
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-          <table className="w-full text-left text-sm" data-testid="keyword-table">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-4 py-3">키워드</th>
-                <th className="px-4 py-3">우선순위</th>
-                <th className="px-4 py-3">등록일</th>
-                <th className="px-4 py-3">검색량</th>
-                <th className="px-4 py-3 text-right">액션</th>
-              </tr>
-            </thead>
-            <tbody>
-              {keywordList.map((keyword) => (
-                <tr key={keyword.id} className="border-t border-slate-100 text-slate-700">
-                  <td className="px-4 py-3 font-medium text-slate-900">{keyword.word}</td>
-                  <td className="px-4 py-3">
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${priorityColors[keyword.priority]}`}>
-                      {keyword.priority === "high"
-                        ? "높음"
-                        : keyword.priority === "medium"
-                        ? "보통"
-                        : "낮음"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-500">{keyword.createdAt}</td>
-                  <td className="px-4 py-3 text-slate-500">{keyword.volume}/day</td>
-                  <td className="px-4 py-3 text-right text-sm">
-                    <button
-                      className="mr-2 text-slate-600 hover:text-slate-900"
-                      onClick={() => openKeywordEditModal(keyword)}
-                    >
-                      수정
-                    </button>
-                    <button
-                      className="text-rose-500 hover:text-rose-600"
-                      onClick={() => handleKeywordDelete(keyword)}
-                    >
-                      삭제
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {keywordList.length === 0 ? (
-                <tr>
-                  <td className="px-4 py-6 text-center text-sm text-slate-500" colSpan={5}>
-                    등록된 키워드가 없습니다.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <AddKeywordModal
-        open={isKeywordModalOpen}
-        onClose={() => {
-          setIsKeywordModalOpen(false);
-          setKeywordError(null);
-        }}
-        keywordForm={keywordForm}
-        setKeywordForm={setKeywordForm}
-        onSubmit={handleKeywordSubmit}
-        error={keywordError}
-        loading={isKeywordSubmitting}
-      />
+      
 
       <AddGroupModal
         open={isGroupModalOpen}

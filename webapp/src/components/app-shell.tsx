@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 
 const baseNavItems = [
   { label: "대시보드", href: "/dashboard", icon: LayoutDashboard },
-  { label: "키워드", href: "/keywords", icon: Tags },
+  { label: "그룹 관리", href: "/keywords", icon: Tags },
   { label: "설정", href: "/settings", icon: Settings },
 ];
 
@@ -99,10 +99,6 @@ export function AppShell({ title, description, action, children }: AppShellProps
             );
           })}
         </nav>
-        <div className="mt-10 rounded-lg border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600">
-          <p className="font-semibold text-slate-900">무료 플랜</p>
-          <p className="mt-1">월 3,000건 이메일 한도를 초과하면 업그레이드가 필요합니다.</p>
-        </div>
       </aside>
 
       <div className="flex flex-1 flex-col">
