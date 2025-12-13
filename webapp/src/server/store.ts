@@ -860,6 +860,7 @@ export async function createKeywordGroup(data: {
   keywords: Keyword[];
   recipients?: string[];
   ownerId?: string;
+  summaryLength?: "short" | "standard" | "long";
 }) {
   await initPromise;
   const id = randomUUID();
