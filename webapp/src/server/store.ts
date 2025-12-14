@@ -469,6 +469,30 @@ export async function listRecentDeliveryLogs(limit = 20): Promise<DeliveryLog[]>
   return rows.map(mapDeliveryLog);
 }
 
+export async function listDeliveryLogsForUser(userId: string, limit = 50): Promise<DeliveryLog[]> {
+  await initPromise;
+  const rows = (await sql`
+    SELECT dl.id,
+           dl.issue_id,
+           dl.group_name,
+           dl.subject,
+           dl.recipient,
+           dl.provider,
+           dl.status,
+           dl.provider_message_id,
+           to_char(dl.sent_at, 'YYYY-MM-DD"T"HH24:MI:SSZ') as sent_at,
+           dl.error
+    FROM delivery_logs dl
+    JOIN digest_issues di ON di.id = dl.issue_id
+    JOIN keyword_groups kg ON kg.id = di.group_id
+    WHERE kg.owner_id = ${userId}
+    ORDER BY dl.sent_at DESC
+    LIMIT ${limit}
+  `) as DeliveryLogRow[];
+
+  return rows.map(mapDeliveryLog);
+}
+
 export async function listDeliverySettings(): Promise<DeliverySetting[]> {
   await initPromise;
   const rows = (await sql`
