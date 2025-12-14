@@ -26,11 +26,7 @@ export default async function HistoryPreviewPage({ params }: PageProps) {
     ? await getDigestIssueById(params.issueId)
     : await getDigestIssueForUser(params.issueId, userId);
 
-  if (!issue) {
-    redirect("/history");
-  }
-
-  const { subject, html } = renderDigestEmail(issue);
+  const content = issue ? renderDigestEmail(issue) : null;
 
   return (
     <AppShell
@@ -38,17 +34,30 @@ export default async function HistoryPreviewPage({ params }: PageProps) {
       description="실제 발송된 이메일 내용을 그대로 확인할 수 있습니다."
     >
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-4 space-y-1">
-          <h2 className="text-lg font-semibold text-slate-900">{subject}</h2>
-          <p className="text-sm text-slate-500">아래 영역은 실제 이메일 HTML을 그대로 렌더링한 미리보기입니다.</p>
-        </div>
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-          <div
-            className="min-h-[400px] w-full bg-slate-50"
-            // eslint-disable-next-line react/no-danger
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
-        </div>
+        {content ? (
+          <>
+            <div className="mb-4 space-y-1">
+              <h2 className="text-lg font-semibold text-slate-900">{content.subject}</h2>
+              <p className="text-sm text-slate-500">
+                아래 영역은 실제 이메일 HTML을 그대로 렌더링한 미리보기입니다.
+              </p>
+            </div>
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+              <div
+                className="min-h-[400px] w-full bg-slate-50"
+                // eslint-disable-next-line react/no-danger
+                dangerouslySetInnerHTML={{ __html: content.html }}
+              />
+            </div>
+          </>
+        ) : (
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold text-slate-900">이메일을 찾을 수 없습니다</h2>
+            <p className="text-sm text-slate-500">
+              해당 발송 이슈가 존재하지 않거나, 이 이메일을 볼 수 있는 권한이 없습니다.
+            </p>
+          </div>
+        )}
       </section>
     </AppShell>
   );
