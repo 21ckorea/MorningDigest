@@ -6,9 +6,10 @@ import { useMemo, useState } from "react";
 
 interface HistoryViewProps {
   logs: DeliveryLog[];
+  isAdmin?: boolean;
 }
 
-export function HistoryView({ logs }: HistoryViewProps) {
+export function HistoryView({ logs, isAdmin }: HistoryViewProps) {
   const [selectedGroup, setSelectedGroup] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "sent" | "failed">("all");
   const [dateFilter, setDateFilter] = useState<"all" | "7d" | "30d">("all");
@@ -205,13 +206,15 @@ export function HistoryView({ logs }: HistoryViewProps) {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="font-semibold text-slate-900">상세 발송 내역</div>
                 <div className="flex items-center gap-3">
-                  <Link
-                    href={`/history/preview/${selectedLog.issueId}`}
-                    target="_blank"
-                    className="text-xs font-medium text-sky-600 hover:text-sky-700"
-                  >
-                    원문 이메일 보기
-                  </Link>
+                  {isAdmin && (
+                    <Link
+                      href={`/history/preview/${selectedLog.issueId}`}
+                      target="_blank"
+                      className="text-xs font-medium text-sky-600 hover:text-sky-700"
+                    >
+                      원문 이메일 보기
+                    </Link>
+                  )}
                   <button
                     type="button"
                     className="text-xs text-slate-500 hover:text-slate-700"

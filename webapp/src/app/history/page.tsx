@@ -25,7 +25,7 @@ export default async function HistoryPage() {
       title="발송 이력"
       description="내 그룹에서 발송된 이메일 이력을 확인할 수 있습니다."
     >
-      <HistoryView logs={logs} />
+      <HistoryView logs={logs} isAdmin={isAdmin} />
     </AppShell>
   );
 }
