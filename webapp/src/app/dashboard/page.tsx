@@ -1,10 +1,25 @@
 import { Activity, CheckCircle2, Sparkles, TriangleAlert } from "lucide-react";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { DigestRunPanel } from "@/components/digest-run-panel";
+import { authOptions, isAdminEmail } from "@/server/auth";
 import { listKeywordGroups, listRecentDeliveryLogs, listRecentDigestIssues, listUsers } from "@/server/store";
 
 export default async function DashboardPage() {
+  const session = await getServerSession(authOptions);
+  const email = session?.user?.email ?? null;
+  const userId = (session?.user as { id?: string } | null)?.id;
+
+  if (!session || !email || !userId) {
+    redirect("/login");
+  }
+
+  const isAdmin = isAdminEmail(email);
+  if (!isAdmin) {
+    redirect("/keywords");
+  }
   const [keywordGroups, digestIssues, deliveryLogs, users] = await Promise.all([
     listKeywordGroups(),
     listRecentDigestIssues(3),

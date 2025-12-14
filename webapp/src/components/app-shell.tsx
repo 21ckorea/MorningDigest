@@ -52,7 +52,8 @@ export function AppShell({ title, description, action, children }: AppShellProps
     if (user?.role === "admin") {
       return [...baseNavItems, { label: "회원 관리", href: "/admin/users", icon: Users }];
     }
-    return baseNavItems;
+    // 일반 사용자는 그룹 관리 메뉴만 노출
+    return baseNavItems.filter((item) => item.href === "/keywords");
   }, [user?.role]);
 
   return (
