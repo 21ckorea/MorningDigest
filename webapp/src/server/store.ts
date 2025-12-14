@@ -1063,6 +1063,81 @@ export async function createDigestIssue(input: CreateDigestIssueInput): Promise<
   return mapDigestIssue(issueRow, articleRows);
 }
 
+export async function getDigestIssueById(issueId: string): Promise<DigestIssue | null> {
+  await initPromise;
+  const issueRows = (await sql`
+    SELECT di.id,
+           di.group_id,
+           di.send_date::text,
+           di.subject,
+           di.highlights,
+           di.status,
+           di.article_count,
+           to_char(di.generated_at, 'YYYY-MM-DD"T"HH24:MI:SSZ') as generated_at,
+           kg.name as group_name
+    FROM digest_issues di
+    JOIN keyword_groups kg ON kg.id = di.group_id
+    WHERE di.id = ${issueId}
+    LIMIT 1
+  `) as DigestIssueRow[];
+
+  if (issueRows.length === 0) return null;
+
+  const articleRows = (await sql`
+    SELECT id,
+           issue_id,
+           headline,
+           summary,
+           source_name,
+           source_url,
+           to_char(published_at, 'YYYY-MM-DD"T"HH24:MI:SSZ') as published_at,
+           relevance_score
+    FROM digest_articles
+    WHERE issue_id = ${issueId}
+    ORDER BY published_at DESC
+  `) as DigestArticleRow[];
+
+  return mapDigestIssue(issueRows[0], articleRows);
+}
+
+export async function getDigestIssueForUser(issueId: string, userId: string): Promise<DigestIssue | null> {
+  await initPromise;
+  const issueRows = (await sql`
+    SELECT di.id,
+           di.group_id,
+           di.send_date::text,
+           di.subject,
+           di.highlights,
+           di.status,
+           di.article_count,
+           to_char(di.generated_at, 'YYYY-MM-DD"T"HH24:MI:SSZ') as generated_at,
+           kg.name as group_name
+    FROM digest_issues di
+    JOIN keyword_groups kg ON kg.id = di.group_id
+    WHERE di.id = ${issueId}
+      AND kg.owner_id = ${userId}
+    LIMIT 1
+  `) as DigestIssueRow[];
+
+  if (issueRows.length === 0) return null;
+
+  const articleRows = (await sql`
+    SELECT id,
+           issue_id,
+           headline,
+           summary,
+           source_name,
+           source_url,
+           to_char(published_at, 'YYYY-MM-DD"T"HH24:MI:SSZ') as published_at,
+           relevance_score
+    FROM digest_articles
+    WHERE issue_id = ${issueId}
+    ORDER BY published_at DESC
+  `) as DigestArticleRow[];
+
+  return mapDigestIssue(issueRows[0], articleRows);
+}
+
 export async function listRecentDigestIssues(limit = 5): Promise<DigestIssue[]> {
   await initPromise;
   const issueRows = (await sql`

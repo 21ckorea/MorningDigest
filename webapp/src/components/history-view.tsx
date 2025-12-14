@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { DeliveryLog } from "@/types";
 import { useMemo, useState } from "react";
 
@@ -166,13 +167,22 @@ export function HistoryView({ logs }: HistoryViewProps) {
             <div className="mt-6 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="font-semibold text-slate-900">상세 발송 내역</div>
-                <button
-                  type="button"
-                  className="text-xs text-slate-500 hover:text-slate-700"
-                  onClick={() => setSelectedLogId(null)}
-                >
-                  닫기
-                </button>
+                <div className="flex items-center gap-3">
+                  <Link
+                    href={`/history/preview/${selectedLog.issueId}`}
+                    target="_blank"
+                    className="text-xs font-medium text-sky-600 hover:text-sky-700"
+                  >
+                    원문 이메일 보기
+                  </Link>
+                  <button
+                    type="button"
+                    className="text-xs text-slate-500 hover:text-slate-700"
+                    onClick={() => setSelectedLogId(null)}
+                  >
+                    닫기
+                  </button>
+                </div>
               </div>
               <dl className="grid gap-2 sm:grid-cols-2">
                 <div>
