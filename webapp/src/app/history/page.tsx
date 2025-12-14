@@ -1,7 +1,7 @@
 import { AppShell } from "@/components/app-shell";
 import { HistoryView } from "@/components/history-view";
-import { authOptions } from "@/server/auth";
-import { listDeliveryLogsForUser } from "@/server/store";
+import { authOptions, isAdminEmail } from "@/server/auth";
+import { listDeliveryLogsForUser, listRecentDeliveryLogs } from "@/server/store";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
@@ -17,7 +17,8 @@ export default async function HistoryPage() {
     redirect("/login");
   }
 
-  const logs = await listDeliveryLogsForUser(userId, 50);
+  const isAdmin = isAdminEmail(email);
+  const logs = isAdmin ? await listRecentDeliveryLogs(50) : await listDeliveryLogsForUser(userId, 50);
 
   return (
     <AppShell
