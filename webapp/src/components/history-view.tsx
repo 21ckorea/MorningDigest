@@ -13,6 +13,7 @@ export function HistoryView({ logs }: HistoryViewProps) {
   const [statusFilter, setStatusFilter] = useState<"all" | "sent" | "failed">("all");
   const [dateFilter, setDateFilter] = useState<"all" | "7d" | "30d">("all");
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const groupOptions = useMemo(() => {
     const names = Array.from(new Set(logs.map((log) => log.groupName)));
@@ -41,6 +42,15 @@ export function HistoryView({ logs }: HistoryViewProps) {
     }
     return next;
   }, [logs, selectedGroup, statusFilter, dateFilter]);
+
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(filteredLogs.length / pageSize));
+
+  const pagedLogs = useMemo(() => {
+    const safePage = Math.min(Math.max(currentPage, 1), totalPages);
+    const start = (safePage - 1) * pageSize;
+    return filteredLogs.slice(start, start + pageSize);
+  }, [filteredLogs, currentPage, totalPages]);
 
   const selectedLog = useMemo(
     () => filteredLogs.find((log) => log.id === selectedLogId) ?? null,
@@ -126,7 +136,7 @@ export function HistoryView({ logs }: HistoryViewProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredLogs.map((log) => {
+                {pagedLogs.map((log) => {
                   const isSelected = log.id === selectedLogId;
                   return (
                     <tr
@@ -162,6 +172,33 @@ export function HistoryView({ logs }: HistoryViewProps) {
                 })}
               </tbody>
             </table>
+          </div>
+          <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+            <div>
+              총 {filteredLogs.length}건 중 {(currentPage - 1) * pageSize + 1}–
+              {Math.min(currentPage * pageSize, filteredLogs.length)}건 표시
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="rounded-full border border-slate-200 px-2 py-0.5 disabled:opacity-40"
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                disabled={currentPage <= 1}
+              >
+                이전
+              </button>
+              <span>
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                type="button"
+                className="rounded-full border border-slate-200 px-2 py-0.5 disabled:opacity-40"
+                onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                disabled={currentPage >= totalPages}
+              >
+                다음
+              </button>
+            </div>
           </div>
           {selectedLog && (
             <div className="mt-6 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">

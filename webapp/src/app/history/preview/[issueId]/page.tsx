@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/app-shell";
-import { authOptions, isAdminEmail } from "@/server/auth";
-import { getDigestIssueById, getDigestIssueForUser } from "@/server/store";
+import { authOptions } from "@/server/auth";
+import { getDigestIssueById } from "@/server/store";
 import { renderDigestEmail } from "@/server/mailer";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
@@ -21,11 +21,7 @@ export default async function HistoryPreviewPage({ params }: PageProps) {
     redirect("/login");
   }
 
-  const isAdmin = isAdminEmail(email);
-  const issue = isAdmin
-    ? await getDigestIssueById(params.issueId)
-    : await getDigestIssueForUser(params.issueId, userId);
-
+  const issue = await getDigestIssueById(params.issueId);
   const content = issue ? renderDigestEmail(issue) : null;
 
   return (
