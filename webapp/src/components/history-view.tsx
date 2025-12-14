@@ -11,6 +11,7 @@ export function HistoryView({ logs }: HistoryViewProps) {
   const [selectedGroup, setSelectedGroup] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "sent" | "failed">("all");
   const [dateFilter, setDateFilter] = useState<"all" | "7d" | "30d">("all");
+  const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
 
   const groupOptions = useMemo(() => {
     const names = Array.from(new Set(logs.map((log) => log.groupName)));
@@ -39,6 +40,11 @@ export function HistoryView({ logs }: HistoryViewProps) {
     }
     return next;
   }, [logs, selectedGroup, statusFilter, dateFilter]);
+
+  const selectedLog = useMemo(
+    () => filteredLogs.find((log) => log.id === selectedLogId) ?? null,
+    [filteredLogs, selectedLogId]
+  );
 
   return (
     <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -104,46 +110,111 @@ export function HistoryView({ logs }: HistoryViewProps) {
       {filteredLogs.length === 0 ? (
         <p className="text-sm text-slate-500">조건에 해당하는 발송 이력이 없습니다.</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="text-xs uppercase tracking-wide text-slate-500">
-                <th className="pb-2">시간</th>
-                <th className="pb-2">그룹</th>
-                <th className="pb-2">제목</th>
-                <th className="pb-2">수신자</th>
-                <th className="pb-2">상태</th>
-                <th className="pb-2">프로바이더</th>
-                <th className="pb-2">메시지</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredLogs.map((log) => (
-                <tr key={log.id}>
-                  <td className="py-2 text-slate-500">{log.sentAt}</td>
-                  <td className="py-2 font-medium text-slate-800">{log.groupName}</td>
-                  <td className="py-2 text-slate-600">{log.subject}</td>
-                  <td className="py-2 text-slate-500">{log.recipient}</td>
-                  <td className="py-2">
-                    <span
-                      className={
-                        log.status === "sent"
-                          ? "rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-600"
-                          : "rounded-full bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-600"
-                      }
-                    >
-                      {log.status === "sent" ? "성공" : "실패"}
-                    </span>
-                  </td>
-                  <td className="py-2 text-slate-500">{log.provider}</td>
-                  <td className="py-2 text-xs text-slate-500">
-                    {log.status === "sent" ? "전송 완료" : log.error ?? "오류 정보 없음"}
-                  </td>
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="text-xs uppercase tracking-wide text-slate-500">
+                  <th className="pb-2">시간</th>
+                  <th className="pb-2">그룹</th>
+                  <th className="pb-2">제목</th>
+                  <th className="pb-2">수신자</th>
+                  <th className="pb-2">상태</th>
+                  <th className="pb-2">프로바이더</th>
+                  <th className="pb-2">메시지</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredLogs.map((log) => {
+                  const isSelected = log.id === selectedLogId;
+                  return (
+                    <tr
+                      key={log.id}
+                      className={
+                        isSelected
+                          ? "cursor-pointer bg-slate-50"
+                          : "cursor-pointer hover:bg-slate-50"
+                      }
+                      onClick={() => setSelectedLogId(isSelected ? null : log.id)}
+                    >
+                      <td className="py-2 text-slate-500">{log.sentAt}</td>
+                      <td className="py-2 font-medium text-slate-800">{log.groupName}</td>
+                      <td className="py-2 text-slate-600">{log.subject}</td>
+                      <td className="py-2 text-slate-500">{log.recipient}</td>
+                      <td className="py-2">
+                        <span
+                          className={
+                            log.status === "sent"
+                              ? "rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-600"
+                              : "rounded-full bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-600"
+                          }
+                        >
+                          {log.status === "sent" ? "성공" : "실패"}
+                        </span>
+                      </td>
+                      <td className="py-2 text-slate-500">{log.provider}</td>
+                      <td className="py-2 text-xs text-slate-500">
+                        {log.status === "sent" ? "전송 완료" : log.error ?? "오류 정보 없음"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {selectedLog && (
+            <div className="mt-6 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="font-semibold text-slate-900">상세 발송 내역</div>
+                <button
+                  type="button"
+                  className="text-xs text-slate-500 hover:text-slate-700"
+                  onClick={() => setSelectedLogId(null)}
+                >
+                  닫기
+                </button>
+              </div>
+              <dl className="grid gap-2 sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs font-medium text-slate-500">시간</dt>
+                  <dd className="text-slate-900">{selectedLog.sentAt}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-slate-500">그룹</dt>
+                  <dd className="text-slate-900">{selectedLog.groupName}</dd>
+                </div>
+                <div className="sm:col-span-2">
+                  <dt className="text-xs font-medium text-slate-500">제목</dt>
+                  <dd className="text-slate-900">{selectedLog.subject}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-slate-500">수신자</dt>
+                  <dd className="text-slate-900">{selectedLog.recipient}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-slate-500">상태</dt>
+                  <dd className="text-slate-900">{selectedLog.status === "sent" ? "성공" : "실패"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-slate-500">프로바이더</dt>
+                  <dd className="text-slate-900">{selectedLog.provider}</dd>
+                </div>
+                {selectedLog.providerMessageId && (
+                  <div className="sm:col-span-2">
+                    <dt className="text-xs font-medium text-slate-500">프로바이더 메시지 ID</dt>
+                    <dd className="break-all text-slate-900">{selectedLog.providerMessageId}</dd>
+                  </div>
+                )}
+                {selectedLog.error && (
+                  <div className="sm:col-span-2">
+                    <dt className="text-xs font-medium text-slate-500">에러 메시지</dt>
+                    <dd className="whitespace-pre-wrap text-slate-900">{selectedLog.error}</dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          )}
+        </>
       )}
     </section>
   );
